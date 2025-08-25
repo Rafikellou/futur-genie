@@ -7,7 +7,7 @@ type TablesUpdate<T extends keyof Tables> = Tables[T]['Update']
 type TablesRow<T extends keyof Tables> = Tables[T]['Row']
 
 // User operations
-export async function createUser(userData: TablesInsert<'users'>) {
+export async function createUser(userData: TablesInsert<'users'>): Promise<TablesRow<'users'>> {
   const { data, error } = await supabase
     .from('users')
     .insert(userData as any)
@@ -15,10 +15,10 @@ export async function createUser(userData: TablesInsert<'users'>) {
     .single()
 
   if (error) throw error
-  return data
+  return data as TablesRow<'users'>
 }
 
-export async function getUserById(id: string) {
+export async function getUserById(id: string): Promise<TablesRow<'users'>> {
   const { data, error } = await supabase
     .from('users')
     .select('*')
@@ -26,21 +26,39 @@ export async function getUserById(id: string) {
     .single()
 
   if (error) throw error
-  return data
+  return data as TablesRow<'users'>
 }
 
 export async function getUsersBySchool(schoolId: string) {
-  const { data, error } = await supabase
-    .from('users')
-    .select('*')
-    .eq('school_id', schoolId)
-
-  if (error) throw error
-  return data
+  const res = await fetch('/api/users/by-school', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ schoolId }),
+  })
+  if (!res.ok) {
+    // Try to surface server error details
+    const text = await res.text().catch(() => '')
+    let msg = 'Failed to fetch users by school'
+    try {
+      const parsed = JSON.parse(text)
+      msg = parsed?.error || msg
+    } catch {}
+    throw new Error(msg)
+  }
+  // Be resilient to unexpected shapes
+  const text = await res.text()
+  try {
+    const json = JSON.parse(text)
+    const items = Array.isArray(json?.items) ? json.items : (Array.isArray(json) ? json : [])
+    return items
+  } catch (e) {
+    console.error('users/by-school parse error. Raw response:', text)
+    return []
+  }
 }
 
 // School operations
-export async function createSchool(name: string) {
+export async function createSchool(name: string): Promise<TablesRow<'schools'>> {
   const { data, error } = await supabase
     .from('schools')
     .insert({ name } as any)
@@ -48,7 +66,7 @@ export async function createSchool(name: string) {
     .single()
 
   if (error) throw error
-  return data
+  return data as TablesRow<'schools'>
 }
 
 export async function getSchoolById(id: string) {
@@ -64,39 +82,52 @@ export async function getSchoolById(id: string) {
 
 // Classroom operations
 export async function createClassroom(classroomData: TablesInsert<'classrooms'>) {
-  const { data, error } = await supabase
-    .from('classrooms')
-    .insert(classroomData as any)
-    .select()
-    .single()
-
-  if (error) throw error
-  return data
+  // Use server API (service role) to bypass RLS and avoid recursion on insert
+  const res = await fetch('/api/classrooms/create', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(classroomData),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err?.error || 'Failed to create classroom')
+  }
 }
 
 export async function getClassroomsBySchool(schoolId: string) {
-  const { data, error } = await supabase
-    .from('classrooms')
-    .select(`
-      *,
-      teacher:users(id, full_name, email)
-    `)
-    .eq('school_id', schoolId)
-
-  if (error) throw error
-  return data
+  const res = await fetch('/api/classrooms/by-school', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ schoolId }),
+  })
+  if (!res.ok) {
+    const text = await res.text().catch(() => '')
+    let msg = 'Failed to fetch classrooms by school'
+    try {
+      const parsed = JSON.parse(text)
+      msg = parsed?.error || msg
+    } catch {}
+    throw new Error(msg)
+  }
+  const text = await res.text()
+  try {
+    const json = JSON.parse(text)
+    const items = Array.isArray(json?.items) ? json.items : (Array.isArray(json) ? json : [])
+    return items
+  } catch (e) {
+    console.error('classrooms/by-school parse error. Raw response:', text)
+    return []
+  }
 }
 
 export async function updateClassroom(id: string, updates: any) {
-  const { data, error } = await (supabase as any)
+  // Avoid immediate SELECT after UPDATE to prevent potential RLS recursion
+  const { error } = await (supabase as any)
     .from('classrooms')
     .update(updates)
     .eq('id', id)
-    .select()
-    .single()
 
   if (error) throw error
-  return data
 }
 
 export async function deleteClassroom(id: string) {
@@ -291,34 +322,16 @@ export async function getSubmissionsByStudent(studentId: string) {
 // Additional statistics functions for real-time dashboard data
 export async function getSchoolStatistics(schoolId: string) {
   try {
-    const [users, classrooms, quizzes] = await Promise.all([
-      getUsersBySchool(schoolId),
-      getClassroomsBySchool(schoolId),
-      supabase
-        .from('quizzes')
-        .select(`
-          *,
-          classroom:classrooms!inner(school_id)
-        `)
-        .eq('classroom.school_id', schoolId)
-    ])
-
-    const teachers = (users as any[]).filter(user => user.role === 'TEACHER')
-    const students = (users as any[]).filter(user => user.role === 'STUDENT')
-    const parents = (users as any[]).filter(user => user.role === 'PARENT')
-
-    // Type the quizzes data properly
-    const quizzesData = quizzes.data as Database['public']['Tables']['quizzes']['Row'][] | null
-
-    return {
-      totalUsers: users?.length || 0,
-      totalTeachers: teachers.length,
-      totalStudents: students.length,
-      totalParents: parents.length,
-      totalClasses: classrooms?.length || 0,
-      totalQuizzes: quizzesData?.length || 0,
-      publishedQuizzes: quizzesData?.filter(q => q.is_published).length || 0
+    const res = await fetch('/api/stats/school', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ schoolId }),
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err?.error || 'Failed to fetch school statistics')
     }
+    return await res.json()
   } catch (error) {
     console.error('Error fetching school statistics:', error)
     throw error
@@ -327,23 +340,17 @@ export async function getSchoolStatistics(schoolId: string) {
 
 export async function getRecentActivity(schoolId: string, limit = 10) {
   try {
-    const { data, error } = await supabase
-      .from('submissions')
-      .select(`
-        *,
-        student:users!inner(id, full_name),
-        quiz:quizzes!inner(
-          id, 
-          title, 
-          classroom:classrooms!inner(school_id)
-        )
-      `)
-      .eq('quiz.classroom.school_id', schoolId)
-      .order('created_at', { ascending: false })
-      .limit(limit)
-
-    if (error) throw error
-    return data || []
+    const res = await fetch('/api/activity/recent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ schoolId, limit }),
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err?.error || 'Failed to fetch recent activity')
+    }
+    const { items } = await res.json()
+    return items || []
   } catch (error) {
     console.error('Error fetching recent activity:', error)
     return []
@@ -352,39 +359,18 @@ export async function getRecentActivity(schoolId: string, limit = 10) {
 
 export async function getQuizEngagementStats(schoolId: string) {
   try {
-    const { data: submissions, error } = await supabase
-      .from('submissions')
-      .select(`
-        *,
-        quiz:quizzes!inner(
-          classroom:classrooms!inner(school_id)
-        )
-      `)
-      .eq('quiz.classroom.school_id', schoolId)
-
-    if (error) throw error
-
-    // Type the submissions data properly
-    const submissionsData = submissions as Database['public']['Tables']['submissions']['Row'][] | null
-
-    const totalSubmissions = submissionsData?.length || 0
-    const averageScore = totalSubmissions > 0 
-      ? submissionsData!.reduce((sum, sub) => sum + (sub.score / sub.total_questions * 100), 0) / totalSubmissions
-      : 0
-
-    // This week's activity
-    const weekAgo = new Date()
-    weekAgo.setDate(weekAgo.getDate() - 7)
-    const thisWeekSubmissions = submissionsData?.filter(sub => 
-      new Date(sub.created_at!) > weekAgo
-    ) || []
-
-    return {
-      totalSubmissions,
-      averageScore: Math.round(averageScore),
-      thisWeekSubmissions: thisWeekSubmissions.length,
-      perfectScores: submissionsData?.filter(sub => sub.score === sub.total_questions).length || 0
+    // Call server API to bypass RLS and heavy joins
+    const res = await fetch('/api/stats/quiz-engagement', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ schoolId }),
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err?.error || 'Failed to fetch engagement stats')
     }
+    const data = await res.json()
+    return data
   } catch (error) {
     console.error('Error fetching quiz engagement stats:', error)
     return {
@@ -584,17 +570,20 @@ export async function getSubmissionsByQuiz(quizId: string) {
 
 // Invitation link operations
 export async function createInvitationLink(linkData: TablesInsert<'invitation_links'>) {
-  const { data, error } = await supabase
-    .from('invitation_links')
-    .insert(linkData as any)
-    .select()
-    .single()
-
-  if (error) throw error
-  return data
+  const res = await fetch('/api/invitations/create', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(linkData),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err?.error || 'Failed to create invitation link')
+  }
+  // No representation returned; caller should refresh lists if needed
+  return { } as unknown as TablesRow<'invitation_links'>
 }
 
-export async function getInvitationLinkByToken(token: string) {
+export async function getInvitationLinkByToken(token: string): Promise<TablesRow<'invitation_links'>> {
   const { data, error } = await supabase
     .from('invitation_links')
     .select(`
@@ -608,10 +597,10 @@ export async function getInvitationLinkByToken(token: string) {
     .single()
 
   if (error) throw error
-  return data
+  return data as TablesRow<'invitation_links'>
 }
 
-export async function markInvitationLinkAsUsed(id: string) {
+export async function markInvitationLinkAsUsed(id: string): Promise<TablesRow<'invitation_links'>> {
   const { data, error } = await (supabase as any)
     .from('invitation_links')
     .update({ used_at: new Date().toISOString() })
@@ -620,11 +609,11 @@ export async function markInvitationLinkAsUsed(id: string) {
     .single()
 
   if (error) throw error
-  return data
+  return data as TablesRow<'invitation_links'>
 }
 
 // Update user profile
-export async function updateUser(id: string, updates: any) {
+export async function updateUser(id: string, updates: any): Promise<TablesRow<'users'>> {
   const { data, error } = await (supabase as any)
     .from('users')
     .update(updates)
@@ -633,22 +622,32 @@ export async function updateUser(id: string, updates: any) {
     .single()
 
   if (error) throw error
-  return data
+  return data as TablesRow<'users'>
 }
 
 // Get available invitation links for a school
 export async function getInvitationLinksBySchool(schoolId: string) {
-  const { data, error } = await supabase
-    .from('invitation_links')
-    .select(`
-      *,
-      classroom:classrooms(id, name, grade),
-      creator:users!created_by(id, full_name)
-    `)
-    .eq('school_id', schoolId)
-    .gt('expires_at', new Date().toISOString())
-    .order('created_at', { ascending: false })
-
-  if (error) throw error
-  return data
+  const res = await fetch('/api/invitations/by-school', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ schoolId }),
+  })
+  if (!res.ok) {
+    const text = await res.text().catch(() => '')
+    let msg = 'Failed to fetch invitation links by school'
+    try {
+      const parsed = JSON.parse(text)
+      msg = parsed?.error || msg
+    } catch {}
+    throw new Error(msg)
+  }
+  const text = await res.text()
+  try {
+    const json = JSON.parse(text)
+    const items = Array.isArray(json?.items) ? json.items : (Array.isArray(json) ? json : [])
+    return items
+  } catch (e) {
+    console.error('invitations/by-school parse error. Raw response:', text)
+    return []
+  }
 }

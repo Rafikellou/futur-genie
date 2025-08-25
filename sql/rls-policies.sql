@@ -57,6 +57,9 @@ DROP POLICY IF EXISTS p_invites_public_select          ON public.invitation_link
 -- ============================================================================
 -- Helpers basés sur JWT (ne lisent AUCUNE table) — zéro risque de boucle
 -- ============================================================================
+-- Créer le schéma 'app' s'il n'existe pas (nécessaire pour nos helpers JWT)
+CREATE SCHEMA IF NOT EXISTS app;
+
 -- Supabase expose auth.jwt() => jsonb des claims
 CREATE OR REPLACE FUNCTION app.jwt_role() RETURNS text
 LANGUAGE sql STABLE AS $$
@@ -134,6 +137,8 @@ CREATE POLICY p_classrooms_director_all ON public.classrooms
   USING     (app.jwt_role() = 'DIRECTOR' AND school_id = app.jwt_school_id())
   WITH CHECK(app.jwt_role() = 'DIRECTOR' AND school_id = app.jwt_school_id());
 
+-- NOTE: To avoid RLS recursion, do NOT reference public.students here.
+-- Grant visibility by school for teacher/student/parent, and restrict per-record updates where needed.
 CREATE POLICY p_classrooms_teacher_select ON public.classrooms
   FOR SELECT USING (app.jwt_role() = 'TEACHER' AND school_id = app.jwt_school_id());
 
@@ -141,21 +146,13 @@ CREATE POLICY p_classrooms_teacher_update ON public.classrooms
   FOR UPDATE USING (app.jwt_role() = 'TEACHER' AND teacher_id = auth.uid())
   WITH CHECK (app.jwt_role() = 'TEACHER' AND teacher_id = auth.uid());
 
+-- Students can view classrooms within their school without joining students -> classrooms
 CREATE POLICY p_classrooms_student_select ON public.classrooms
-  FOR SELECT USING (
-    app.jwt_role() = 'STUDENT'
-    AND id IN (SELECT classroom_id FROM public.students WHERE id = auth.uid())
-  );
+  FOR SELECT USING (app.jwt_role() = 'STUDENT' AND school_id = app.jwt_school_id());
 
+-- Parents can view classrooms within their school without joining students -> classrooms
 CREATE POLICY p_classrooms_parent_select ON public.classrooms
-  FOR SELECT USING (
-    app.jwt_role() = 'PARENT'
-    AND id IN (
-      SELECT classroom_id
-      FROM public.students
-      WHERE parent_id = auth.uid() AND classroom_id IS NOT NULL
-    )
-  );
+  FOR SELECT USING (app.jwt_role() = 'PARENT' AND school_id = app.jwt_school_id());
 
 -- ============================================================================
 -- STUDENTS
