@@ -4,25 +4,15 @@ import { createContext, useContext, useEffect, useState } from 'react'
 import { User } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 import { UserRole } from '@/types/database'
-import { getUserById } from '@/lib/database'
-import { Database } from '@/types/database'
-
-interface UserProfile {
-  id: string
-  role: UserRole
-  school_id: string | null
-  email: string | null
-  full_name: string | null
-  schoolName?: string // For director signup flow
-}
+import { AuthService, AuthUser, SignUpData } from '@/lib/auth'
 
 interface AuthContextType {
   user: User | null
-  profile: UserProfile | null
+  profile: AuthUser | null
   loading: boolean
   isNewDirector: boolean
   signIn: (email: string, password: string) => Promise<void>
-  signUp: (email: string, password: string, userData: Partial<UserProfile>, invitationToken?: string) => Promise<void>
+  signUp: (email: string, password: string, userData: Partial<SignUpData>) => Promise<void>
   signOut: () => Promise<void>
   refreshProfile: () => Promise<void>
 }
@@ -31,29 +21,26 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
-  const [profile, setProfile] = useState<UserProfile | null>(null)
+  const [profile, setProfile] = useState<AuthUser | null>(null)
   const [loading, setLoading] = useState(true)
   const [isNewDirector, setIsNewDirector] = useState(false)
 
   const refreshProfile = async () => {
     if (user) {
       try {
-        const userProfile = await getUserById(user.id) as UserProfile
+        const userProfile = await AuthService.getCurrentUserProfile()
         setProfile(userProfile)
         
         // Check if this is a director without a school assigned yet
-        // This will help redirect them to the school creation page
-        if (userProfile.role === 'DIRECTOR' && !userProfile.school_id) {
-          setIsNewDirector(true)
-        } else {
-          setIsNewDirector(false)
-        }
+        setIsNewDirector(AuthService.isNewDirector(userProfile))
       } catch (error) {
         console.error('Error fetching user profile:', error)
         setProfile(null)
+        setIsNewDirector(false)
       }
     } else {
       setProfile(null)
+      setIsNewDirector(false)
     }
   }
 
@@ -80,90 +67,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [user])
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
-    if (error) throw error
+    await AuthService.signIn(email, password)
   }
 
-  const signUp = async (email: string, password: string, userData: Partial<UserProfile>, invitationToken?: string) => {
-    const { data, error } = await supabase.auth.signUp({
+  const signUp = async (email: string, password: string, userData: Partial<SignUpData>) => {
+    // Préparer les données pour le service d'authentification
+    const signUpData: SignUpData = {
       email,
       password,
-    })
-    
-    if (error) throw error
-    
-    // Create user profile if signup successful
-    if (data.user) {
-      // For directors, we need to handle school creation differently
-      if (userData.role === 'DIRECTOR' && userData.schoolName) {
-        // Store school name for later creation after user profile is created
-        const { error: profileError } = await supabase
-          .from('users')
-          .insert({
-            id: data.user.id,
-            email: email,
-            role: 'DIRECTOR' as UserRole,
-            school_id: null, // Will be updated after school creation
-            full_name: userData.full_name || null,
-          } as any)
-        
-        if (profileError) throw profileError
-        
-        // Now create the school and update the user
-        try {
-          const { createSchool, updateUser } = await import('@/lib/database')
-          const school = await createSchool(userData.schoolName) as { id: string }
-          
-          // Update user with school_id
-          await updateUser(data.user.id, { school_id: school.id })
-        } catch (schoolError) {
-          console.error('Error creating school after signup:', schoolError)
-          throw new Error('Erreur lors de la création de l\'école')
-        }
-      } else {
-        // Regular user signup
-        const { error: profileError } = await supabase
-          .from('users')
-          .insert({
-            id: data.user.id,
-            email: email,
-            role: (userData.role || 'STUDENT') as UserRole,
-            school_id: userData.school_id || null,
-            full_name: userData.full_name || null,
-          } as any)
-        
-        if (profileError) throw profileError
-      }
-      
-      // If there's an invitation token, mark it as used
-      if (invitationToken) {
-        try {
-          const { markInvitationLinkAsUsed, getInvitationLinkByToken } = await import('@/lib/database')
-          
-          // Type definition for invitation link result
-          type InvitationLink = Database['public']['Tables']['invitation_links']['Row'] & {
-            school?: { id: string; name: string } | null;
-            classroom?: { id: string; name: string; grade: string } | null;
-          }
-          
-          const invitation = await getInvitationLinkByToken(invitationToken) as InvitationLink
-          if (invitation && invitation.id) {
-            await markInvitationLinkAsUsed(invitation.id)
-          }
-        } catch (invitationError) {
-          console.warn('Could not mark invitation as used:', invitationError)
-          // Don't throw here as the user account was created successfully
-        }
-      }
+      role: userData.role || 'STUDENT',
+      full_name: userData.full_name,
+      school_id: userData.school_id,
+      invitation_token: userData.invitation_token,
+      schoolName: userData.schoolName,
+      // Pour les directeurs, créer les données d'école
+      school_data: userData.role === 'DIRECTOR' && userData.schoolName ? {
+        name: userData.schoolName
+      } : undefined
     }
+
+    // Utiliser le service d'authentification centralisé
+    await AuthService.signUp(signUpData)
   }
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut()
-    if (error) throw error
+    await AuthService.signOut()
   }
 
   const value = {

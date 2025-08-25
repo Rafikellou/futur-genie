@@ -8,10 +8,6 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Loader2, School } from 'lucide-react'
-import { createSchool } from '@/lib/database'
-import { Database } from '@/types/database'
-
-type TablesRow<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Row']
 
 interface DirectorSignupProps {
   onBack?: () => void
@@ -56,15 +52,14 @@ export function DirectorSignup({ onBack }: DirectorSignupProps) {
     setError(null)
 
     try {
-      // Create the director account and school in one flow
+      // Use the centralized auth service for atomic school + director creation
       await signUp(formData.email, formData.password, {
         role: 'DIRECTOR',
         full_name: formData.fullName,
-        schoolName: formData.schoolName // Pass school name to be created after user creation
+        schoolName: formData.schoolName // This will be handled atomically by AuthService
       })
       
       // Success - user will be redirected automatically by auth context
-      // The school creation will be handled in the signup process
     } catch (error: any) {
       setError(error.message || 'Une erreur est survenue lors de la création du compte')
     } finally {
