@@ -307,14 +307,17 @@ export async function getSchoolStatistics(schoolId: string) {
     const students = (users as any[]).filter(user => user.role === 'STUDENT')
     const parents = (users as any[]).filter(user => user.role === 'PARENT')
 
+    // Type the quizzes data properly
+    const quizzesData = quizzes.data as Database['public']['Tables']['quizzes']['Row'][] | null
+
     return {
       totalUsers: users?.length || 0,
       totalTeachers: teachers.length,
       totalStudents: students.length,
       totalParents: parents.length,
       totalClasses: classrooms?.length || 0,
-      totalQuizzes: quizzes.data?.length || 0,
-      publishedQuizzes: quizzes.data?.filter(q => q.is_published).length || 0
+      totalQuizzes: quizzesData?.length || 0,
+      publishedQuizzes: quizzesData?.filter(q => q.is_published).length || 0
     }
   } catch (error) {
     console.error('Error fetching school statistics:', error)
@@ -361,23 +364,26 @@ export async function getQuizEngagementStats(schoolId: string) {
 
     if (error) throw error
 
-    const totalSubmissions = submissions?.length || 0
+    // Type the submissions data properly
+    const submissionsData = submissions as Database['public']['Tables']['submissions']['Row'][] | null
+
+    const totalSubmissions = submissionsData?.length || 0
     const averageScore = totalSubmissions > 0 
-      ? submissions.reduce((sum, sub) => sum + (sub.score / sub.total_questions * 100), 0) / totalSubmissions
+      ? submissionsData!.reduce((sum, sub) => sum + (sub.score / sub.total_questions * 100), 0) / totalSubmissions
       : 0
 
     // This week's activity
     const weekAgo = new Date()
     weekAgo.setDate(weekAgo.getDate() - 7)
-    const thisWeekSubmissions = submissions?.filter(sub => 
-      new Date(sub.created_at) > weekAgo
+    const thisWeekSubmissions = submissionsData?.filter(sub => 
+      new Date(sub.created_at!) > weekAgo
     ) || []
 
     return {
       totalSubmissions,
       averageScore: Math.round(averageScore),
       thisWeekSubmissions: thisWeekSubmissions.length,
-      perfectScores: submissions?.filter(sub => sub.score === sub.total_questions).length || 0
+      perfectScores: submissionsData?.filter(sub => sub.score === sub.total_questions).length || 0
     }
   } catch (error) {
     console.error('Error fetching quiz engagement stats:', error)
@@ -399,23 +405,26 @@ export async function getStudentEngagementStats(studentId: string) {
 
     if (error) throw error
 
-    const totalQuizzesTaken = submissions?.length || 0
+    // Type the submissions data properly
+    const submissionsData = submissions as Database['public']['Tables']['submissions']['Row'][] | null
+
+    const totalQuizzesTaken = submissionsData?.length || 0
     const averageScore = totalQuizzesTaken > 0 
-      ? submissions.reduce((sum, sub) => sum + (sub.score / sub.total_questions * 100), 0) / totalQuizzesTaken
+      ? submissionsData!.reduce((sum, sub) => sum + (sub.score / sub.total_questions * 100), 0) / totalQuizzesTaken
       : 0
 
     // This week's activity
     const weekAgo = new Date()
     weekAgo.setDate(weekAgo.getDate() - 7)
-    const thisWeekSubmissions = submissions?.filter(sub => 
-      new Date(sub.created_at) > weekAgo
+    const thisWeekSubmissions = submissionsData?.filter(sub => 
+      new Date(sub.created_at!) > weekAgo
     ) || []
 
-    const perfectScores = submissions?.filter(sub => sub.score === sub.total_questions).length || 0
+    const perfectScores = submissionsData?.filter(sub => sub.score === sub.total_questions).length || 0
     
     // Get best score
     const bestScore = totalQuizzesTaken > 0 
-      ? Math.max(...submissions.map(sub => (sub.score / sub.total_questions) * 100))
+      ? Math.max(...submissionsData!.map(sub => (sub.score / sub.total_questions) * 100))
       : 0
 
     return {
@@ -450,7 +459,10 @@ export async function getParentChildrenStats(parentId: string) {
 
     if (childrenError) throw childrenError
 
-    if (!children || children.length === 0) {
+    // Type the children data properly
+    const childrenData = children as { id: string; user: { id: string; full_name: string } }[] | null
+
+    if (!childrenData || childrenData.length === 0) {
       return {
         totalChildren: 0,
         totalQuizzesTaken: 0,
@@ -461,7 +473,7 @@ export async function getParentChildrenStats(parentId: string) {
     }
 
     // Get submissions for all children
-    const childrenIds = children.map(child => child.id)
+    const childrenIds = childrenData.map(child => child.id)
     const { data: submissions, error: submissionsError } = await supabase
       .from('submissions')
       .select(`*`)
@@ -469,22 +481,25 @@ export async function getParentChildrenStats(parentId: string) {
 
     if (submissionsError) throw submissionsError
 
-    const totalQuizzesTaken = submissions?.length || 0
+    // Type the submissions data properly
+    const submissionsData = submissions as Database['public']['Tables']['submissions']['Row'][] | null
+
+    const totalQuizzesTaken = submissionsData?.length || 0
     const averageScore = totalQuizzesTaken > 0 
-      ? submissions.reduce((sum, sub) => sum + (sub.score / sub.total_questions * 100), 0) / totalQuizzesTaken
+      ? submissionsData!.reduce((sum, sub) => sum + (sub.score / sub.total_questions * 100), 0) / totalQuizzesTaken
       : 0
 
     // This week's activity
     const weekAgo = new Date()
     weekAgo.setDate(weekAgo.getDate() - 7)
-    const thisWeekSubmissions = submissions?.filter(sub => 
-      new Date(sub.created_at) > weekAgo
+    const thisWeekSubmissions = submissionsData?.filter(sub => 
+      new Date(sub.created_at!) > weekAgo
     ) || []
 
-    const perfectScores = submissions?.filter(sub => sub.score === sub.total_questions).length || 0
+    const perfectScores = submissionsData?.filter(sub => sub.score === sub.total_questions).length || 0
 
     return {
-      totalChildren: children.length,
+      totalChildren: childrenData.length,
       totalQuizzesTaken,
       averageScore: Math.round(averageScore),
       thisWeekActivity: thisWeekSubmissions.length,
@@ -515,15 +530,23 @@ export async function getTeacherEngagementStats(teacherId: string) {
         .eq('quiz.owner_id', teacherId)
     ])
 
-    const totalQuizzes = quizzes?.length || 0
-    const publishedQuizzes = quizzes?.filter(q => q.is_published).length || 0
-    const totalSubmissions = submissions.data?.length || 0
+    // Type the submissions data properly
+    const submissionsData = submissions.data as Database['public']['Tables']['submissions']['Row'][] | null
+
+    // Type the quizzes data properly
+    const quizzesData = quizzes as (Database['public']['Tables']['quizzes']['Row'] & {
+      classroom: { id: string; name: string; grade: string } | null
+    })[] | null
+
+    const totalQuizzes = quizzesData?.length || 0
+    const publishedQuizzes = quizzesData?.filter(q => q.is_published).length || 0
+    const totalSubmissions = submissionsData?.length || 0
     
     // This week's activity
     const weekAgo = new Date()
     weekAgo.setDate(weekAgo.getDate() - 7)
-    const thisWeekSubmissions = submissions.data?.filter(sub => 
-      new Date(sub.created_at) > weekAgo
+    const thisWeekSubmissions = submissionsData?.filter(sub => 
+      new Date(sub.created_at!) > weekAgo
     ).length || 0
 
     return {

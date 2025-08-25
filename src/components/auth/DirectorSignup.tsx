@@ -9,6 +9,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Loader2, School } from 'lucide-react'
 import { createSchool } from '@/lib/database'
+import { Database } from '@/types/database'
+
+type TablesRow<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Row']
 
 interface DirectorSignupProps {
   onBack?: () => void
@@ -54,7 +57,7 @@ export function DirectorSignup({ onBack }: DirectorSignupProps) {
 
     try {
       // First create the school
-      const school = await createSchool(formData.schoolName)
+      const school: TablesRow<'schools'> = await createSchool(formData.schoolName)
       
       // Then create the director account
       await signUp(formData.email, formData.password, {
