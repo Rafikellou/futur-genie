@@ -56,15 +56,17 @@ export function DirectorSignup({ onBack }: DirectorSignupProps) {
     setError(null)
 
     try {
-      // First create the school
-      const school: TablesRow<'schools'> = await createSchool(formData.schoolName)
-      
-      // Then create the director account
+      // First create the director account without school_id
       await signUp(formData.email, formData.password, {
         role: 'DIRECTOR',
-        school_id: school.id,
         full_name: formData.fullName
       })
+      
+      // After user creation, create school and update user
+      // Note: This will be handled in the onboarding process after signup
+      // The user will be redirected to a page where they can create their school
+      // We'll store the school name in localStorage for the next step
+      localStorage.setItem('pendingSchoolName', formData.schoolName)
       
       // Success - user will be redirected automatically by auth context
     } catch (error: any) {

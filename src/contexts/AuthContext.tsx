@@ -18,6 +18,7 @@ interface AuthContextType {
   user: User | null
   profile: UserProfile | null
   loading: boolean
+  isNewDirector: boolean
   signIn: (email: string, password: string) => Promise<void>
   signUp: (email: string, password: string, userData: Partial<UserProfile>, invitationToken?: string) => Promise<void>
   signOut: () => Promise<void>
@@ -30,12 +31,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
+  const [isNewDirector, setIsNewDirector] = useState(false)
 
   const refreshProfile = async () => {
     if (user) {
       try {
         const userProfile = await getUserById(user.id)
         setProfile(userProfile)
+        
+        // Check if this is a director without a school assigned yet
+        // This will help redirect them to the school creation page
+        if (userProfile.role === 'DIRECTOR' && !userProfile.school_id) {
+          setIsNewDirector(true)
+        } else {
+          setIsNewDirector(false)
+        }
       } catch (error) {
         console.error('Error fetching user profile:', error)
         setProfile(null)
@@ -120,6 +130,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     user,
     profile,
     loading,
+    isNewDirector,
     signIn,
     signUp,
     signOut,
