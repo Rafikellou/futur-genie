@@ -36,7 +36,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const refreshProfile = async () => {
     if (user) {
       try {
-        const userProfile = await getUserById(user.id)
+        const userProfile = await getUserById(user.id) as UserProfile
         setProfile(userProfile)
         
         // Check if this is a director without a school assigned yet
@@ -112,7 +112,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
           const { markInvitationLinkAsUsed, getInvitationLinkByToken } = await import('@/lib/database')
           const invitation = await getInvitationLinkByToken(invitationToken)
-          await markInvitationLinkAsUsed((invitation as any).id)
+          if (invitation && invitation.id) {
+            await markInvitationLinkAsUsed(invitation.id)
+          }
         } catch (invitationError) {
           console.warn('Could not mark invitation as used:', invitationError)
           // Don't throw here as the user account was created successfully
