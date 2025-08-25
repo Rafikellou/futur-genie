@@ -5,6 +5,7 @@ import { User } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 import { UserRole } from '@/types/database'
 import { getUserById } from '@/lib/database'
+import { Database } from '@/types/database'
 
 interface UserProfile {
   id: string
@@ -111,7 +112,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (invitationToken) {
         try {
           const { markInvitationLinkAsUsed, getInvitationLinkByToken } = await import('@/lib/database')
-          const invitation = await getInvitationLinkByToken(invitationToken)
+          
+          // Type definition for invitation link result
+          type InvitationLink = Database['public']['Tables']['invitation_links']['Row'] & {
+            school?: { id: string; name: string } | null;
+            classroom?: { id: string; name: string; grade: string } | null;
+          }
+          
+          const invitation = await getInvitationLinkByToken(invitationToken) as InvitationLink
           if (invitation && invitation.id) {
             await markInvitationLinkAsUsed(invitation.id)
           }
