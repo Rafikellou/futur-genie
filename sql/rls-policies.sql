@@ -109,17 +109,12 @@ CREATE POLICY p_users_director_update ON public.users
   FOR UPDATE USING (app.jwt_role() = 'DIRECTOR' AND school_id = app.jwt_school_id())
   WITH CHECK    (app.jwt_role() = 'DIRECTOR' AND school_id = app.jwt_school_id());
 
--- Enseignant : voir les élèves de SES classes (passe par students/classrooms, pas users)
+-- Teachers can view student users in their school (simplified to avoid recursion)
 CREATE POLICY p_users_teacher_students_select ON public.users
   FOR SELECT USING (
     app.jwt_role() = 'TEACHER'
     AND role = 'STUDENT'
-    AND id IN (
-      SELECT s.id
-      FROM public.students s
-      JOIN public.classrooms c ON c.id = s.classroom_id
-      WHERE c.teacher_id = auth.uid()
-    )
+    AND school_id = app.jwt_school_id()
   );
 
 -- Parent : voir le profil de ses enfants
@@ -137,20 +132,20 @@ CREATE POLICY p_classrooms_director_all ON public.classrooms
   USING     (app.jwt_role() = 'DIRECTOR' AND school_id = app.jwt_school_id())
   WITH CHECK(app.jwt_role() = 'DIRECTOR' AND school_id = app.jwt_school_id());
 
--- NOTE: To avoid RLS recursion, do NOT reference public.students here.
--- Grant visibility by school for teacher/student/parent, and restrict per-record updates where needed.
+-- Teachers can view all classrooms in their school (simplified to avoid recursion)
 CREATE POLICY p_classrooms_teacher_select ON public.classrooms
   FOR SELECT USING (app.jwt_role() = 'TEACHER' AND school_id = app.jwt_school_id());
 
+-- Teachers can only update classrooms they are assigned to (simplified check)
 CREATE POLICY p_classrooms_teacher_update ON public.classrooms
-  FOR UPDATE USING (app.jwt_role() = 'TEACHER' AND teacher_id = auth.uid())
-  WITH CHECK (app.jwt_role() = 'TEACHER' AND teacher_id = auth.uid());
+  FOR UPDATE USING (app.jwt_role() = 'TEACHER' AND school_id = app.jwt_school_id() AND teacher_id = auth.uid())
+  WITH CHECK (app.jwt_role() = 'TEACHER' AND school_id = app.jwt_school_id() AND teacher_id = auth.uid());
 
--- Students can view classrooms within their school without joining students -> classrooms
+-- Students can view classrooms within their school
 CREATE POLICY p_classrooms_student_select ON public.classrooms
   FOR SELECT USING (app.jwt_role() = 'STUDENT' AND school_id = app.jwt_school_id());
 
--- Parents can view classrooms within their school without joining students -> classrooms
+-- Parents can view classrooms within their school
 CREATE POLICY p_classrooms_parent_select ON public.classrooms
   FOR SELECT USING (app.jwt_role() = 'PARENT' AND school_id = app.jwt_school_id());
 
@@ -167,10 +162,16 @@ CREATE POLICY p_students_parent_update ON public.students
   FOR UPDATE USING (parent_id = auth.uid())
   WITH CHECK (parent_id = auth.uid());
 
+-- Teachers can view students in their school (avoid circular dependency with classrooms)
 CREATE POLICY p_students_teacher_select ON public.students
   FOR SELECT USING (
     app.jwt_role() = 'TEACHER'
-    AND classroom_id IN (SELECT id FROM public.classrooms WHERE teacher_id = auth.uid())
+    AND EXISTS (
+      SELECT 1 FROM public.classrooms c 
+      WHERE c.id = classroom_id 
+      AND c.teacher_id = auth.uid() 
+      AND c.school_id = app.jwt_school_id()
+    )
   );
 
 CREATE POLICY p_students_director_select ON public.students
