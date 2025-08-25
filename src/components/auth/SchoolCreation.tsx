@@ -10,6 +10,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Loader2, School } from 'lucide-react'
 import { createSchool, updateUser } from '@/lib/database'
+import { Database } from '@/types/database'
+
+type TablesRow<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Row']
 
 export function SchoolCreation() {
   const [schoolName, setSchoolName] = useState('')
@@ -43,7 +46,7 @@ export function SchoolCreation() {
 
     try {
       // Create the school
-      const school = await createSchool(schoolName)
+      const school: TablesRow<'schools'> = await createSchool(schoolName)
       
       // Update the director's user record with the school_id
       await updateUser(profile.id, {
