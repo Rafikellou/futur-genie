@@ -1,6 +1,6 @@
 import { supabase } from './supabase'
 import { UserRole } from '@/types/database'
-import { createSchool, createUser } from './database'
+// user profile creation now handled via server API route to bypass RLS
 
 export interface SignUpData {
   email: string
@@ -22,7 +22,7 @@ export interface SignUpData {
 
 export interface AuthUser {
   id: string
-  email: string
+  email: string | null
   role: UserRole
   school_id: string | null
   full_name: string | null
@@ -55,8 +55,17 @@ export class AuthService {
       if (role === 'DIRECTOR' && (school_data?.name || signUpData.schoolName)) {
         try {
           const schoolName = school_data?.name || signUpData.schoolName!
-          const school = await createSchool(schoolName)
-          finalSchoolId = school.id
+          const res = await fetch('/api/schools/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: schoolName }),
+          })
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}))
+            throw new Error(err?.error || 'Failed to create school')
+          }
+          const { school } = await res.json()
+          finalSchoolId = school.id as string
         } catch (schoolError) {
           // Si la création d'école échoue, supprimer l'utilisateur auth créé
           try {
@@ -69,15 +78,24 @@ export class AuthService {
         }
       }
 
-      // 3. Créer le profil utilisateur avec le school_id correct
+      // 3. Créer le profil utilisateur avec le school_id correct (via API server)
       try {
-        const userProfile = await createUser({
-          id: authData.user.id,
-          email: email,
-          role: role,
-          school_id: finalSchoolId,
-          full_name: userData.full_name || null,
+        const res = await fetch('/api/users/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: authData.user.id,
+            email,
+            role,
+            school_id: finalSchoolId ?? null,
+            full_name: userData.full_name ?? null,
+          }),
         })
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}))
+          throw new Error(err?.error || 'Failed to create user profile')
+        }
+        const { user: userProfile } = await res.json()
 
         // 4. Gérer le token d'invitation si présent
         if (invitation_token) {
@@ -86,10 +104,10 @@ export class AuthService {
 
         return {
           id: userProfile.id,
-          email: userProfile.email,
+          email: userProfile.email ?? null,
           role: userProfile.role,
-          school_id: userProfile.school_id,
-          full_name: userProfile.full_name,
+          school_id: userProfile.school_id ?? null,
+          full_name: userProfile.full_name ?? null,
         }
       } catch (profileError) {
         // Si la création du profil échoue, nettoyer l'utilisateur auth
@@ -153,15 +171,24 @@ export class AuthService {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return null
 
-      const { getUserById } = await import('./database')
-      const profile = await getUserById(user.id)
+      // Fetch via server API (service role) to avoid RLS recursion
+      const res = await fetch('/api/users/me', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: user.id }),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err?.error || 'Failed to fetch profile')
+      }
+      const { user: profile } = await res.json()
 
       return {
         id: profile.id,
-        email: profile.email,
+        email: profile.email ?? null,
         role: profile.role,
-        school_id: profile.school_id,
-        full_name: profile.full_name,
+        school_id: profile.school_id ?? null,
+        full_name: profile.full_name ?? null,
       }
     } catch (error) {
       console.error('Erreur lors de la récupération du profil:', error)
@@ -184,7 +211,16 @@ export class AuthService {
       const { updateUser } = await import('./database')
       
       // Créer l'école
-      const school = await createSchool(schoolName)
+      const res = await fetch('/api/schools/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: schoolName }),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err?.error || 'Failed to create school')
+      }
+      const { school } = await res.json()
       
       // Mettre à jour l'utilisateur avec le school_id
       await updateUser(directorId, { school_id: school.id })

@@ -253,15 +253,15 @@ export function ClassroomManagement() {
               <div className="space-y-2">
                 <Label htmlFor="teacher">Enseignant (optionnel)</Label>
                 <Select 
-                  value={formData.teacherId} 
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, teacherId: value }))}
+                  value={formData.teacherId || 'none'}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, teacherId: value === 'none' ? '' : value }))}
                   disabled={creating}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Sélectionner un enseignant" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Aucun enseignant assigné</SelectItem>
+                    <SelectItem value="none">Aucun enseignant assigné</SelectItem>
                     {teachers.map(teacher => (
                       <SelectItem key={teacher.id} value={teacher.id}>
                         {teacher.full_name} ({teacher.email})
@@ -343,15 +343,15 @@ export function ClassroomManagement() {
             <div className="space-y-2">
               <Label htmlFor="editTeacher">Enseignant (optionnel)</Label>
               <Select 
-                value={formData.teacherId} 
-                onValueChange={(value) => setFormData(prev => ({ ...prev, teacherId: value }))}
+                value={formData.teacherId || 'none'} 
+                onValueChange={(value) => setFormData(prev => ({ ...prev, teacherId: value === 'none' ? '' : value }))}
                 disabled={editing}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Sélectionner un enseignant" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Aucun enseignant assigné</SelectItem>
+                  <SelectItem value="none">Aucun enseignant assigné</SelectItem>
                   {teachers.map(teacher => (
                     <SelectItem key={teacher.id} value={teacher.id}>
                       {teacher.full_name} ({teacher.email})

@@ -60,7 +60,7 @@ export function InvitationManagement() {
   const [copiedTokenId, setCopiedTokenId] = useState<string | null>(null)
   const [formData, setFormData] = useState<CreateInvitationData>({
     userType: 'TEACHER',
-    classroomId: '',
+    classroomId: '', // empty means no specific classroom
     expiresInDays: 7,
     customMessage: ''
   })
@@ -266,14 +266,16 @@ L'équipe pédagogique`
                 <div className="space-y-2">
                   <Label>Classe (optionnel)</Label>
                   <Select 
-                    value={formData.classroomId} 
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, classroomId: value }))}
+                    value={formData.classroomId || 'none'}
+                    onValueChange={(value) => 
+                      setFormData(prev => ({ ...prev, classroomId: value === 'none' ? '' : value }))
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Sélectionner une classe" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Aucune classe spécifique</SelectItem>
+                      <SelectItem value="none">Aucune classe spécifique</SelectItem>
                       {classrooms.map(classroom => (
                         <SelectItem key={classroom.id} value={classroom.id}>
                           {classroom.name} ({classroom.grade})

@@ -83,8 +83,9 @@ export function StudentSignup({ token, onBack }: StudentSignupProps) {
       await signUp(formData.email, formData.password, {
         role: 'STUDENT',
         school_id: invitationData?.school_id || null,
-        full_name: formData.fullName
-      }, token)
+        full_name: formData.fullName,
+        invitation_token: token
+      })
       
       // Success - user will be redirected automatically by auth context
     } catch (error: any) {
