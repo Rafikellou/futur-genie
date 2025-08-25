@@ -56,19 +56,15 @@ export function DirectorSignup({ onBack }: DirectorSignupProps) {
     setError(null)
 
     try {
-      // First create the director account without school_id
+      // Create the director account and school in one flow
       await signUp(formData.email, formData.password, {
         role: 'DIRECTOR',
-        full_name: formData.fullName
+        full_name: formData.fullName,
+        schoolName: formData.schoolName // Pass school name to be created after user creation
       })
       
-      // After user creation, create school and update user
-      // Note: This will be handled in the onboarding process after signup
-      // The user will be redirected to a page where they can create their school
-      // We'll store the school name in localStorage for the next step
-      localStorage.setItem('pendingSchoolName', formData.schoolName)
-      
       // Success - user will be redirected automatically by auth context
+      // The school creation will be handled in the signup process
     } catch (error: any) {
       setError(error.message || 'Une erreur est survenue lors de la création du compte')
     } finally {

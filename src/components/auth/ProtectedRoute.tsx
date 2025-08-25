@@ -36,9 +36,9 @@ export function ProtectedRoute({
     return fallback
   }
 
-  // Check if user is a new director and needs to create a school
+  // Check if user is a new director and needs to create a school (fallback)
   if (isNewDirector && pathname !== '/create-school') {
-    // Redirect to school creation page
+    // Redirect to school creation page as fallback
     if (typeof window !== 'undefined') {
       router.push('/create-school')
     }

@@ -13,6 +13,7 @@ interface UserProfile {
   school_id: string | null
   email: string | null
   full_name: string | null
+  schoolName?: string // For director signup flow
 }
 
 interface AuthContextType {
@@ -96,13 +97,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     // Create user profile if signup successful
     if (data.user) {
+      let schoolId = userData.school_id || null
+      
+      // If this is a director signup with a school name, create the school first
+      if (userData.role === 'DIRECTOR' && userData.schoolName && !schoolId) {
+        try {
+          const { createSchool } = await import('@/lib/database')
+          const school = await createSchool(userData.schoolName) as { id: string }
+          schoolId = school.id
+        } catch (schoolError) {
+          console.error('Error creating school during signup:', schoolError)
+          throw new Error('Erreur lors de la création de l\'école')
+        }
+      }
+      
       const { error: profileError } = await supabase
         .from('users')
         .insert({
           id: data.user.id,
           email: email,
           role: (userData.role || 'STUDENT') as UserRole,
-          school_id: userData.school_id || null,
+          school_id: schoolId,
           full_name: userData.full_name || null,
         } as any) // Using 'as any' to bypass type issues temporarily
       

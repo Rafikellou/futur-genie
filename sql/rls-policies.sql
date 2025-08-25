@@ -70,11 +70,11 @@ $$;
 -- ============================================================================
 -- SCHOOLS
 -- ============================================================================
--- Directeur : CRUD sur SON école
+-- Directeur : CRUD sur SON école OU création de sa première école (school_id null)
 CREATE POLICY p_schools_director_all ON public.schools
   FOR ALL
-  USING     (app.jwt_role() = 'DIRECTOR' AND id = app.jwt_school_id())
-  WITH CHECK(app.jwt_role() = 'DIRECTOR' AND id = app.jwt_school_id());
+  USING     (app.jwt_role() = 'DIRECTOR' AND (id = app.jwt_school_id() OR app.jwt_school_id() IS NULL))
+  WITH CHECK(app.jwt_role() = 'DIRECTOR' AND (id = app.jwt_school_id() OR app.jwt_school_id() IS NULL));
 
 -- Enseignant / Parent / Élève : lecture de leur école
 CREATE POLICY p_schools_teacher_select ON public.schools
