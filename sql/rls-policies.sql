@@ -162,16 +162,11 @@ CREATE POLICY p_students_parent_update ON public.students
   FOR UPDATE USING (parent_id = auth.uid())
   WITH CHECK (parent_id = auth.uid());
 
--- Teachers can view students in their school (avoid circular dependency with classrooms)
+-- Teachers can view students in their school (simplified to prevent recursion)
 CREATE POLICY p_students_teacher_select ON public.students
   FOR SELECT USING (
     app.jwt_role() = 'TEACHER'
-    AND EXISTS (
-      SELECT 1 FROM public.classrooms c 
-      WHERE c.id = classroom_id 
-      AND c.teacher_id = auth.uid() 
-      AND c.school_id = app.jwt_school_id()
-    )
+    AND classroom_id IN (SELECT id FROM public.classrooms WHERE school_id = app.jwt_school_id())
   );
 
 CREATE POLICY p_students_director_select ON public.students
@@ -201,11 +196,11 @@ CREATE POLICY p_quizzes_teacher_all ON public.quizzes
   USING     (app.jwt_role() = 'TEACHER' AND owner_id = auth.uid())
   WITH CHECK(app.jwt_role() = 'TEACHER' AND owner_id = auth.uid());
 
--- (Optionnel) Enseignant : lecture des quizzes assignés à leurs classes
+-- Enseignant : lecture des quizzes assignés aux classes de leur école
 CREATE POLICY p_quizzes_teacher_class_select ON public.quizzes
   FOR SELECT USING (
     app.jwt_role() = 'TEACHER'
-    AND classroom_id IN (SELECT id FROM public.classrooms WHERE teacher_id = auth.uid())
+    AND classroom_id IN (SELECT id FROM public.classrooms WHERE school_id = app.jwt_school_id())
   );
 
 -- Directeur : lecture de tous les quizzes de l’école
@@ -253,13 +248,13 @@ CREATE POLICY p_submissions_student_select ON public.submissions
 CREATE POLICY p_submissions_student_insert ON public.submissions
   FOR INSERT WITH CHECK (app.jwt_role() = 'STUDENT' AND student_id = auth.uid());
 
--- Enseignant : voir les remises des quizzes de SES classes
+-- Enseignant : voir les remises des quizzes des classes de LEUR ÉCOLE
 CREATE POLICY p_submissions_teacher_select ON public.submissions
   FOR SELECT USING (
     app.jwt_role() = 'TEACHER'
     AND quiz_id IN (
       SELECT q.id FROM public.quizzes q
-      WHERE q.classroom_id IN (SELECT id FROM public.classrooms WHERE teacher_id = auth.uid())
+      WHERE q.classroom_id IN (SELECT id FROM public.classrooms WHERE school_id = app.jwt_school_id())
     )
   );
 

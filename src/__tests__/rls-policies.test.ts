@@ -16,9 +16,9 @@ describe('RLS Policy Logic Tests', () => {
              userSchoolId === classroomSchoolId
     }
 
-    const canTeacherViewStudents = (userRole: string, userSchoolId: string | null, studentSchoolId: string) => {
-      return userRole === 'TEACHER' && userSchoolId === studentSchoolId
-    }
+    const canTeacherViewStudents = (userRole: string, userSchoolId: string | null, studentClassroomSchoolId: string) => {
+      return userRole === 'TEACHER' && userSchoolId === studentClassroomSchoolId;
+    };
 
     test('should validate director classroom access', () => {
       expect(canDirectorAccessClassroom('DIRECTOR', 'school-1', 'school-1')).toBe(true)
@@ -36,10 +36,13 @@ describe('RLS Policy Logic Tests', () => {
     })
 
     test('should validate teacher student access without circular dependencies', () => {
-      expect(canTeacherViewStudents('TEACHER', 'school-1', 'school-1')).toBe(true)
-      expect(canTeacherViewStudents('TEACHER', 'school-1', 'school-2')).toBe(false)
-      expect(canTeacherViewStudents('STUDENT', 'school-1', 'school-1')).toBe(false)
-    })
+      // A teacher can view students in their school.
+      expect(canTeacherViewStudents('TEACHER', 'school-1', 'school-1')).toBe(true);
+      // A teacher from another school cannot view students.
+      expect(canTeacherViewStudents('TEACHER', 'school-1', 'school-2')).toBe(false);
+      // A student role should fail this specific test.
+      expect(canTeacherViewStudents('STUDENT', 'school-1', 'school-1')).toBe(false);
+    });
   })
 
   describe('RLS Recursion Prevention', () => {
