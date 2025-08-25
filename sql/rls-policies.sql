@@ -42,14 +42,14 @@ DROP POLICY IF EXISTS "Anyone can view valid invitation links" ON invitation_lin
 CREATE POLICY "Users can view their own school" ON schools
     FOR SELECT USING (
         id IN (
-            SELECT DISTINCT school_id FROM users WHERE id = auth.uid() AND school_id IS NOT NULL
+            SELECT school_id FROM users WHERE id = auth.uid() AND school_id IS NOT NULL
         )
     );
 
--- Directors can manage their school
+-- Directors can manage their school (simplified to avoid recursion)
 CREATE POLICY "Directors can manage their school" ON schools
     FOR ALL USING (
-        id = (
+        id IN (
             SELECT school_id FROM users 
             WHERE id = auth.uid() AND role = 'DIRECTOR' AND school_id IS NOT NULL
         )
@@ -62,19 +62,19 @@ CREATE POLICY "Users can view their own profile" ON users
 CREATE POLICY "Users can update their own profile" ON users
     FOR UPDATE USING (id = auth.uid());
 
--- Directors can view users in their school (using a simpler approach to avoid recursion)
+-- Directors can view users in their school (simplified to avoid recursion)
 CREATE POLICY "Directors can view users in their school" ON users
     FOR SELECT USING (
-        school_id = (
+        school_id IN (
             SELECT school_id FROM users 
             WHERE id = auth.uid() AND role = 'DIRECTOR' AND school_id IS NOT NULL
         ) AND school_id IS NOT NULL
     );
 
--- Directors can manage users in their school
+-- Directors can manage users in their school (simplified to avoid recursion)
 CREATE POLICY "Directors can manage users in their school" ON users
     FOR ALL USING (
-        school_id = (
+        school_id IN (
             SELECT school_id FROM users 
             WHERE id = auth.uid() AND role = 'DIRECTOR' AND school_id IS NOT NULL
         ) AND school_id IS NOT NULL
@@ -93,14 +93,14 @@ CREATE POLICY "Teachers can view students in their classrooms" ON users
 -- Simplified to avoid recursion
 CREATE POLICY "Users can view classrooms in their school" ON classrooms
     FOR SELECT USING (
-        school_id = (
+        school_id IN (
             SELECT school_id FROM users WHERE id = auth.uid() AND school_id IS NOT NULL
         )
     );
 
 CREATE POLICY "Directors can manage classrooms in their school" ON classrooms
     FOR ALL USING (
-        school_id = (
+        school_id IN (
             SELECT school_id FROM users 
             WHERE id = auth.uid() AND role = 'DIRECTOR' AND school_id IS NOT NULL
         )
@@ -129,12 +129,11 @@ CREATE POLICY "Teachers can view students in their classrooms" ON students
 -- Simplified to avoid recursion
 CREATE POLICY "Directors can view students in their school" ON students
     FOR SELECT USING (
-        EXISTS (
-            SELECT 1 FROM users u 
-            WHERE u.id = auth.uid() AND u.role = 'DIRECTOR' AND u.school_id IS NOT NULL
-            AND EXISTS (
-                SELECT 1 FROM classrooms c 
-                WHERE c.id = students.classroom_id AND c.school_id = u.school_id
+        classroom_id IN (
+            SELECT id FROM classrooms 
+            WHERE school_id IN (
+                SELECT school_id FROM users 
+                WHERE id = auth.uid() AND role = 'DIRECTOR' AND school_id IS NOT NULL
             )
         )
     );
@@ -221,7 +220,7 @@ CREATE POLICY "Parents can view their children's submissions" ON submissions
 -- Invitation links policies
 CREATE POLICY "Directors can manage invitation links for their school" ON invitation_links
     FOR ALL USING (
-        school_id = (
+        school_id IN (
             SELECT school_id FROM users 
             WHERE id = auth.uid() AND role = 'DIRECTOR' AND school_id IS NOT NULL
         )
