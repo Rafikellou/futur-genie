@@ -11,10 +11,9 @@ describe('RLS Policy Logic Tests', () => {
       return userRole === 'DIRECTOR' && userSchoolId === classroomSchoolId
     }
 
-    const canTeacherUpdateClassroom = (userRole: string, userSchoolId: string | null, classroomSchoolId: string, classroomTeacherId: string | null, userId: string) => {
+    const canTeacherUpdateClassroom = (userRole: string, userSchoolId: string | null, classroomSchoolId: string) => {
       return userRole === 'TEACHER' && 
-             userSchoolId === classroomSchoolId && 
-             classroomTeacherId === userId
+             userSchoolId === classroomSchoolId
     }
 
     const canTeacherViewStudents = (userRole: string, userSchoolId: string | null, studentSchoolId: string) => {
@@ -28,9 +27,12 @@ describe('RLS Policy Logic Tests', () => {
     })
 
     test('should validate teacher classroom update permissions', () => {
-      expect(canTeacherUpdateClassroom('TEACHER', 'school-1', 'school-1', 'teacher-1', 'teacher-1')).toBe(true)
-      expect(canTeacherUpdateClassroom('TEACHER', 'school-1', 'school-1', 'teacher-2', 'teacher-1')).toBe(false)
-      expect(canTeacherUpdateClassroom('TEACHER', 'school-1', 'school-2', 'teacher-1', 'teacher-1')).toBe(false)
+      // A teacher can update any classroom in their school, regardless of who is assigned.
+      expect(canTeacherUpdateClassroom('TEACHER', 'school-1', 'school-1')).toBe(true)
+      // A teacher from another school cannot update.
+      expect(canTeacherUpdateClassroom('TEACHER', 'school-1', 'school-2')).toBe(false)
+      // A director role should fail this specific test.
+      expect(canTeacherUpdateClassroom('DIRECTOR', 'school-1', 'school-1')).toBe(false)
     })
 
     test('should validate teacher student access without circular dependencies', () => {

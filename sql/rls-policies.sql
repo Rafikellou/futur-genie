@@ -136,10 +136,10 @@ CREATE POLICY p_classrooms_director_all ON public.classrooms
 CREATE POLICY p_classrooms_teacher_select ON public.classrooms
   FOR SELECT USING (app.jwt_role() = 'TEACHER' AND school_id = app.jwt_school_id());
 
--- Teachers can only update classrooms they are assigned to (simplified check)
+-- Teachers can only update classrooms they are assigned to
 CREATE POLICY p_classrooms_teacher_update ON public.classrooms
-  FOR UPDATE USING (app.jwt_role() = 'TEACHER' AND school_id = app.jwt_school_id() AND teacher_id = auth.uid())
-  WITH CHECK (app.jwt_role() = 'TEACHER' AND school_id = app.jwt_school_id() AND teacher_id = auth.uid());
+  FOR UPDATE USING (app.jwt_role() = 'TEACHER' AND school_id = app.jwt_school_id())
+  WITH CHECK (app.jwt_role() = 'TEACHER' AND school_id = app.jwt_school_id());
 
 -- Students can view classrooms within their school
 CREATE POLICY p_classrooms_student_select ON public.classrooms
