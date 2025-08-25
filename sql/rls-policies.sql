@@ -18,6 +18,7 @@ DROP POLICY IF EXISTS p_schools_student_select         ON public.schools;
 
 DROP POLICY IF EXISTS p_users_self_select              ON public.users;
 DROP POLICY IF EXISTS p_users_self_update              ON public.users;
+DROP POLICY IF EXISTS p_users_insert_self              ON public.users;
 DROP POLICY IF EXISTS p_users_director_select          ON public.users;
 DROP POLICY IF EXISTS p_users_director_update          ON public.users;
 DROP POLICY IF EXISTS p_users_teacher_students_select  ON public.users;
@@ -93,6 +94,10 @@ CREATE POLICY p_users_self_select ON public.users
 CREATE POLICY p_users_self_update ON public.users
   FOR UPDATE USING (id = auth.uid())
   WITH CHECK (id = auth.uid());
+
+-- Permettre l'insertion d'un nouvel utilisateur (pour le signup)
+CREATE POLICY p_users_insert_self ON public.users
+  FOR INSERT WITH CHECK (id = auth.uid());
 
 -- Directeur : voir & gérer les users de son école (pas de fonction qui relit users)
 CREATE POLICY p_users_director_select ON public.users

@@ -97,31 +97,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     // Create user profile if signup successful
     if (data.user) {
-      let schoolId = userData.school_id || null
-      
-      // If this is a director signup with a school name, create the school first
-      if (userData.role === 'DIRECTOR' && userData.schoolName && !schoolId) {
+      // For directors, we need to handle school creation differently
+      if (userData.role === 'DIRECTOR' && userData.schoolName) {
+        // Store school name for later creation after user profile is created
+        const { error: profileError } = await supabase
+          .from('users')
+          .insert({
+            id: data.user.id,
+            email: email,
+            role: 'DIRECTOR' as UserRole,
+            school_id: null, // Will be updated after school creation
+            full_name: userData.full_name || null,
+          } as any)
+        
+        if (profileError) throw profileError
+        
+        // Now create the school and update the user
         try {
-          const { createSchool } = await import('@/lib/database')
+          const { createSchool, updateUser } = await import('@/lib/database')
           const school = await createSchool(userData.schoolName) as { id: string }
-          schoolId = school.id
+          
+          // Update user with school_id
+          await updateUser(data.user.id, { school_id: school.id })
         } catch (schoolError) {
-          console.error('Error creating school during signup:', schoolError)
+          console.error('Error creating school after signup:', schoolError)
           throw new Error('Erreur lors de la création de l\'école')
         }
+      } else {
+        // Regular user signup
+        const { error: profileError } = await supabase
+          .from('users')
+          .insert({
+            id: data.user.id,
+            email: email,
+            role: (userData.role || 'STUDENT') as UserRole,
+            school_id: userData.school_id || null,
+            full_name: userData.full_name || null,
+          } as any)
+        
+        if (profileError) throw profileError
       }
-      
-      const { error: profileError } = await supabase
-        .from('users')
-        .insert({
-          id: data.user.id,
-          email: email,
-          role: (userData.role || 'STUDENT') as UserRole,
-          school_id: schoolId,
-          full_name: userData.full_name || null,
-        } as any) // Using 'as any' to bypass type issues temporarily
-      
-      if (profileError) throw profileError
       
       // If there's an invitation token, mark it as used
       if (invitationToken) {
