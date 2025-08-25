@@ -1,326 +1,290 @@
--- Enable Row Level Security on all tables (safe to run multiple times)
-ALTER TABLE schools ENABLE ROW LEVEL SECURITY;
-ALTER TABLE users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE classrooms ENABLE ROW LEVEL SECURITY;
-ALTER TABLE students ENABLE ROW LEVEL SECURITY;
-ALTER TABLE quizzes ENABLE ROW LEVEL SECURITY;
-ALTER TABLE quiz_items ENABLE ROW LEVEL SECURITY;
-ALTER TABLE submissions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE invitation_links ENABLE ROW LEVEL SECURITY;
+-- ============================================================================
+-- PRÉREQUIS : activer RLS (idempotent)
+-- ============================================================================
+ALTER TABLE public.schools       ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.users         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.classrooms    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.students      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.quizzes       ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.quiz_items    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.submissions   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.invitation_links ENABLE ROW LEVEL SECURITY;
 
--- Drop existing policies if they exist (safe to run multiple times)
-DROP POLICY IF EXISTS "Users can view their own school" ON schools;
-DROP POLICY IF EXISTS "Directors can manage their school" ON schools;
-DROP POLICY IF EXISTS "Users can view their own profile" ON users;
-DROP POLICY IF EXISTS "Users can update their own profile" ON users;
-DROP POLICY IF EXISTS "Directors can view users in their school" ON users;
-DROP POLICY IF EXISTS "Directors can manage users in their school" ON users;
-DROP POLICY IF EXISTS "Teachers can view students in their classrooms" ON users;
-DROP POLICY IF EXISTS "Users can view classrooms in their school" ON classrooms;
-DROP POLICY IF EXISTS "Directors can manage classrooms in their school" ON classrooms;
-DROP POLICY IF EXISTS "Teachers can view their assigned classrooms" ON classrooms;
-DROP POLICY IF EXISTS "Students can view their own record" ON students;
-DROP POLICY IF EXISTS "Parents can view their children" ON students;
-DROP POLICY IF EXISTS "Parents can manage their children" ON students;
-DROP POLICY IF EXISTS "Teachers can view students in their classrooms" ON students;
-DROP POLICY IF EXISTS "Directors can view students in their school" ON students;
-DROP POLICY IF EXISTS "Everyone can view published self-service quizzes" ON quizzes;
-DROP POLICY IF EXISTS "Students can view quizzes assigned to their classroom" ON quizzes;
-DROP POLICY IF EXISTS "Teachers can manage their own quizzes" ON quizzes;
-DROP POLICY IF EXISTS "Teachers can view quizzes for their classrooms" ON quizzes;
-DROP POLICY IF EXISTS "Users can view quiz items for accessible quizzes" ON quiz_items;
-DROP POLICY IF EXISTS "Teachers can manage quiz items for their quizzes" ON quiz_items;
-DROP POLICY IF EXISTS "Students can view their own submissions" ON submissions;
-DROP POLICY IF EXISTS "Students can create their own submissions" ON submissions;
-DROP POLICY IF EXISTS "Teachers can view submissions for their classroom quizzes" ON submissions;
-DROP POLICY IF EXISTS "Parents can view their children's submissions" ON submissions;
-DROP POLICY IF EXISTS "Directors can manage invitation links for their school" ON invitation_links;
-DROP POLICY IF EXISTS "Anyone can view valid invitation links" ON invitation_links;
+-- Nettoyage (idempotent)
+DROP POLICY IF EXISTS p_schools_director_all           ON public.schools;
+DROP POLICY IF EXISTS p_schools_teacher_select         ON public.schools;
+DROP POLICY IF EXISTS p_schools_parent_select          ON public.schools;
+DROP POLICY IF EXISTS p_schools_student_select         ON public.schools;
 
--- Get current user's role helper function to avoid recursive queries
-CREATE OR REPLACE FUNCTION auth.user_role()
-RETURNS TEXT AS $$
-  SELECT role::TEXT FROM public.users WHERE id = auth.uid();
-$$ LANGUAGE sql SECURITY DEFINER;
+DROP POLICY IF EXISTS p_users_self_select              ON public.users;
+DROP POLICY IF EXISTS p_users_self_update              ON public.users;
+DROP POLICY IF EXISTS p_users_director_select          ON public.users;
+DROP POLICY IF EXISTS p_users_director_update          ON public.users;
+DROP POLICY IF EXISTS p_users_teacher_students_select  ON public.users;
+DROP POLICY IF EXISTS p_users_parent_children_select   ON public.users;
 
--- Get current user's school_id helper function to avoid recursive queries
-CREATE OR REPLACE FUNCTION auth.user_school()
-RETURNS uuid AS $$
-  SELECT school_id FROM public.users WHERE id = auth.uid();
-$$ LANGUAGE sql SECURITY DEFINER;
+DROP POLICY IF EXISTS p_classrooms_director_all        ON public.classrooms;
+DROP POLICY IF EXISTS p_classrooms_teacher_select      ON public.classrooms;
+DROP POLICY IF EXISTS p_classrooms_teacher_update      ON public.classrooms;
+DROP POLICY IF EXISTS p_classrooms_student_select      ON public.classrooms;
+DROP POLICY IF EXISTS p_classrooms_parent_select       ON public.classrooms;
 
---
--- SCHOOLS POLICIES
---
+DROP POLICY IF EXISTS p_students_self_select           ON public.students;
+DROP POLICY IF EXISTS p_students_parent_select         ON public.students;
+DROP POLICY IF EXISTS p_students_parent_update         ON public.students;
+DROP POLICY IF EXISTS p_students_teacher_select        ON public.students;
+DROP POLICY IF EXISTS p_students_director_select       ON public.students;
 
--- DIRECTORS: Can view and manage their own school
-CREATE POLICY "Directors can manage schools" ON schools
-    FOR ALL USING (auth.user_role() = 'DIRECTOR' AND id = auth.user_school());
+DROP POLICY IF EXISTS p_quizzes_public_select          ON public.quizzes;
+DROP POLICY IF EXISTS p_quizzes_student_select         ON public.quizzes;
+DROP POLICY IF EXISTS p_quizzes_teacher_all            ON public.quizzes;
+DROP POLICY IF EXISTS p_quizzes_teacher_class_select   ON public.quizzes;
+DROP POLICY IF EXISTS p_quizzes_director_select        ON public.quizzes;
 
--- TEACHERS: Can view their school
-CREATE POLICY "Teachers can view school" ON schools
-    FOR SELECT USING (auth.user_role() = 'TEACHER' AND id = auth.user_school());
+DROP POLICY IF EXISTS p_quiz_items_user_select         ON public.quiz_items;
+DROP POLICY IF EXISTS p_quiz_items_teacher_all         ON public.quiz_items;
 
--- PARENTS: Can view their school
-CREATE POLICY "Parents can view school" ON schools
-    FOR SELECT USING (auth.user_role() = 'PARENT' AND id = auth.user_school());
+DROP POLICY IF EXISTS p_submissions_student_select     ON public.submissions;
+DROP POLICY IF EXISTS p_submissions_student_insert     ON public.submissions;
+DROP POLICY IF EXISTS p_submissions_teacher_select     ON public.submissions;
+DROP POLICY IF EXISTS p_submissions_parent_select      ON public.submissions;
+DROP POLICY IF EXISTS p_submissions_director_select    ON public.submissions;
 
--- STUDENTS: Can view their school
-CREATE POLICY "Students can view school" ON schools
-    FOR SELECT USING (auth.user_role() = 'STUDENT' AND id = auth.user_school());
+DROP POLICY IF EXISTS p_invites_director_all           ON public.invitation_links;
+DROP POLICY IF EXISTS p_invites_public_select          ON public.invitation_links;
 
---
--- USERS POLICIES
---
+-- ============================================================================
+-- Helpers basés sur JWT (ne lisent AUCUNE table) — zéro risque de boucle
+-- ============================================================================
+-- Supabase expose auth.jwt() => jsonb des claims
+CREATE OR REPLACE FUNCTION app.jwt_role() RETURNS text
+LANGUAGE sql STABLE AS $$
+  SELECT COALESCE( NULLIF(auth.jwt() ->> 'role','') , '' );
+$$;
 
--- ALL USERS: Can view and update their own profile
-CREATE POLICY "Users can view their own profile" ON users
-    FOR SELECT USING (id = auth.uid());
+CREATE OR REPLACE FUNCTION app.jwt_school_id() RETURNS uuid
+LANGUAGE sql STABLE AS $$
+  SELECT NULLIF(auth.jwt() ->> 'school_id','')::uuid;
+$$;
 
-CREATE POLICY "Users can update their own profile" ON users
-    FOR UPDATE USING (id = auth.uid());
+-- ============================================================================
+-- SCHOOLS
+-- ============================================================================
+-- Directeur : CRUD sur SON école
+CREATE POLICY p_schools_director_all ON public.schools
+  FOR ALL
+  USING     (app.jwt_role() = 'DIRECTOR' AND id = app.jwt_school_id())
+  WITH CHECK(app.jwt_role() = 'DIRECTOR' AND id = app.jwt_school_id());
 
--- DIRECTORS: Can view and manage users in their school
-CREATE POLICY "Directors can view school users" ON users
-    FOR SELECT USING (
-        auth.user_role() = 'DIRECTOR' AND 
-        school_id = auth.user_school() AND 
-        school_id IS NOT NULL
-    );
+-- Enseignant / Parent / Élève : lecture de leur école
+CREATE POLICY p_schools_teacher_select ON public.schools
+  FOR SELECT USING (app.jwt_role() = 'TEACHER'  AND id = app.jwt_school_id());
+CREATE POLICY p_schools_parent_select  ON public.schools
+  FOR SELECT USING (app.jwt_role() = 'PARENT'   AND id = app.jwt_school_id());
+CREATE POLICY p_schools_student_select ON public.schools
+  FOR SELECT USING (app.jwt_role() = 'STUDENT'  AND id = app.jwt_school_id());
 
-CREATE POLICY "Directors can manage school users" ON users
-    FOR ALL USING (
-        auth.user_role() = 'DIRECTOR' AND 
-        school_id = auth.user_school() AND 
-        school_id IS NOT NULL
-    );
+-- ============================================================================
+-- USERS
+-- ============================================================================
+-- Chacun voit / met à jour son profil
+CREATE POLICY p_users_self_select ON public.users
+  FOR SELECT USING (id = auth.uid());
+CREATE POLICY p_users_self_update ON public.users
+  FOR UPDATE USING (id = auth.uid())
+  WITH CHECK (id = auth.uid());
 
--- TEACHERS: Can view students in their classrooms
-CREATE POLICY "Teachers can view classroom students" ON users
-    FOR SELECT USING (
-        auth.user_role() = 'TEACHER' AND 
-        role = 'STUDENT' AND 
-        id IN (
-            SELECT s.id FROM students s
-            JOIN classrooms c ON s.classroom_id = c.id
-            WHERE c.teacher_id = auth.uid()
-        )
-    );
+-- Directeur : voir & gérer les users de son école (pas de fonction qui relit users)
+CREATE POLICY p_users_director_select ON public.users
+  FOR SELECT USING (app.jwt_role() = 'DIRECTOR' AND school_id = app.jwt_school_id());
+CREATE POLICY p_users_director_update ON public.users
+  FOR UPDATE USING (app.jwt_role() = 'DIRECTOR' AND school_id = app.jwt_school_id())
+  WITH CHECK    (app.jwt_role() = 'DIRECTOR' AND school_id = app.jwt_school_id());
 
--- PARENTS: Can view their children's profiles
-CREATE POLICY "Parents can view children profiles" ON users
-    FOR SELECT USING (
-        auth.user_role() = 'PARENT' AND 
-        id IN (SELECT id FROM students WHERE parent_id = auth.uid())
-    );
+-- Enseignant : voir les élèves de SES classes (passe par students/classrooms, pas users)
+CREATE POLICY p_users_teacher_students_select ON public.users
+  FOR SELECT USING (
+    app.jwt_role() = 'TEACHER'
+    AND role = 'STUDENT'
+    AND id IN (
+      SELECT s.id
+      FROM public.students s
+      JOIN public.classrooms c ON c.id = s.classroom_id
+      WHERE c.teacher_id = auth.uid()
+    )
+  );
 
---
--- CLASSROOMS POLICIES
---
+-- Parent : voir le profil de ses enfants
+CREATE POLICY p_users_parent_children_select ON public.users
+  FOR SELECT USING (
+    app.jwt_role() = 'PARENT'
+    AND id IN (SELECT id FROM public.students WHERE parent_id = auth.uid())
+  );
 
--- DIRECTORS: Can manage all classrooms in their school
-CREATE POLICY "Directors can manage classrooms" ON classrooms
-    FOR ALL USING (
-        auth.user_role() = 'DIRECTOR' AND 
-        school_id = auth.user_school()
-    );
+-- ============================================================================
+-- CLASSROOMS
+-- ============================================================================
+CREATE POLICY p_classrooms_director_all ON public.classrooms
+  FOR ALL
+  USING     (app.jwt_role() = 'DIRECTOR' AND school_id = app.jwt_school_id())
+  WITH CHECK(app.jwt_role() = 'DIRECTOR' AND school_id = app.jwt_school_id());
 
--- TEACHERS: Can view classrooms they teach and others in their school
-CREATE POLICY "Teachers can view all school classrooms" ON classrooms
-    FOR SELECT USING (
-        auth.user_role() = 'TEACHER' AND 
-        school_id = auth.user_school()
-    );
+CREATE POLICY p_classrooms_teacher_select ON public.classrooms
+  FOR SELECT USING (app.jwt_role() = 'TEACHER' AND school_id = app.jwt_school_id());
 
-CREATE POLICY "Teachers can update their classrooms" ON classrooms
-    FOR UPDATE USING (
-        auth.user_role() = 'TEACHER' AND 
-        teacher_id = auth.uid()
-    );
+CREATE POLICY p_classrooms_teacher_update ON public.classrooms
+  FOR UPDATE USING (app.jwt_role() = 'TEACHER' AND teacher_id = auth.uid())
+  WITH CHECK (app.jwt_role() = 'TEACHER' AND teacher_id = auth.uid());
 
--- STUDENTS: Can view only their own classroom
-CREATE POLICY "Students can view their classroom" ON classrooms
-    FOR SELECT USING (
-        auth.user_role() = 'STUDENT' AND 
-        id IN (SELECT classroom_id FROM students WHERE id = auth.uid())
-    );
+CREATE POLICY p_classrooms_student_select ON public.classrooms
+  FOR SELECT USING (
+    app.jwt_role() = 'STUDENT'
+    AND id IN (SELECT classroom_id FROM public.students WHERE id = auth.uid())
+  );
 
--- PARENTS: Can view only their children's classrooms
-CREATE POLICY "Parents can view children classrooms" ON classrooms
-    FOR SELECT USING (
-        auth.user_role() = 'PARENT' AND 
-        id IN (
-            SELECT classroom_id FROM students 
-            WHERE parent_id = auth.uid() AND classroom_id IS NOT NULL
-        )
-    );
+CREATE POLICY p_classrooms_parent_select ON public.classrooms
+  FOR SELECT USING (
+    app.jwt_role() = 'PARENT'
+    AND id IN (
+      SELECT classroom_id
+      FROM public.students
+      WHERE parent_id = auth.uid() AND classroom_id IS NOT NULL
+    )
+  );
 
---
--- STUDENTS POLICIES
---
+-- ============================================================================
+-- STUDENTS
+-- ============================================================================
+CREATE POLICY p_students_self_select ON public.students
+  FOR SELECT USING (id = auth.uid());
 
--- STUDENTS: Can view their own record
-CREATE POLICY "Students can view own record" ON students
-    FOR SELECT USING (id = auth.uid());
+CREATE POLICY p_students_parent_select ON public.students
+  FOR SELECT USING (parent_id = auth.uid());
 
--- PARENTS: Can view and manage their children
-CREATE POLICY "Parents can view children" ON students
-    FOR SELECT USING (parent_id = auth.uid());
+CREATE POLICY p_students_parent_update ON public.students
+  FOR UPDATE USING (parent_id = auth.uid())
+  WITH CHECK (parent_id = auth.uid());
 
-CREATE POLICY "Parents can manage children" ON students
-    FOR UPDATE USING (parent_id = auth.uid());
+CREATE POLICY p_students_teacher_select ON public.students
+  FOR SELECT USING (
+    app.jwt_role() = 'TEACHER'
+    AND classroom_id IN (SELECT id FROM public.classrooms WHERE teacher_id = auth.uid())
+  );
 
--- TEACHERS: Can view students in their classrooms
-CREATE POLICY "Teachers can view classroom students" ON students
-    FOR SELECT USING (
-        auth.user_role() = 'TEACHER' AND 
-        classroom_id IN (SELECT id FROM classrooms WHERE teacher_id = auth.uid())
-    );
+CREATE POLICY p_students_director_select ON public.students
+  FOR SELECT USING (
+    app.jwt_role() = 'DIRECTOR'
+    AND classroom_id IN (SELECT id FROM public.classrooms WHERE school_id = app.jwt_school_id())
+  );
 
--- DIRECTORS: Can view all students in their school
-CREATE POLICY "Directors can view school students" ON students
-    FOR SELECT USING (
-        auth.user_role() = 'DIRECTOR' AND 
-        classroom_id IN (
-            SELECT id FROM classrooms WHERE school_id = auth.user_school()
-        )
-    );
+-- ============================================================================
+-- QUIZZES
+-- ============================================================================
+-- Tout le monde peut voir les quizzes "self-service" publiés
+CREATE POLICY p_quizzes_public_select ON public.quizzes
+  FOR SELECT USING (owner_id IS NULL AND classroom_id IS NULL AND is_published = true);
 
---
--- QUIZZES POLICIES
---
+-- Élèves : voir les quizzes de leur classe (publiés)
+CREATE POLICY p_quizzes_student_select ON public.quizzes
+  FOR SELECT USING (
+    app.jwt_role() = 'STUDENT'
+    AND is_published = true
+    AND classroom_id IN (SELECT classroom_id FROM public.students WHERE id = auth.uid())
+  );
 
--- EVERYONE: Can view published self-service quizzes
-CREATE POLICY "Everyone can view published self-service quizzes" ON quizzes
-    FOR SELECT USING (owner_id IS NULL AND classroom_id IS NULL AND is_published = true);
+-- Enseignants : CRUD sur leurs propres quizzes
+CREATE POLICY p_quizzes_teacher_all ON public.quizzes
+  FOR ALL
+  USING     (app.jwt_role() = 'TEACHER' AND owner_id = auth.uid())
+  WITH CHECK(app.jwt_role() = 'TEACHER' AND owner_id = auth.uid());
 
--- STUDENTS: Can view quizzes assigned to their classroom
-CREATE POLICY "Students can view classroom quizzes" ON quizzes
-    FOR SELECT USING (
-        auth.user_role() = 'STUDENT' AND
-        classroom_id IN (SELECT classroom_id FROM students WHERE id = auth.uid()) AND 
-        is_published = true
-    );
+-- (Optionnel) Enseignant : lecture des quizzes assignés à leurs classes
+CREATE POLICY p_quizzes_teacher_class_select ON public.quizzes
+  FOR SELECT USING (
+    app.jwt_role() = 'TEACHER'
+    AND classroom_id IN (SELECT id FROM public.classrooms WHERE teacher_id = auth.uid())
+  );
 
--- TEACHERS: Can manage their own quizzes and view quizzes for their classrooms
-CREATE POLICY "Teachers can manage own quizzes" ON quizzes
-    FOR ALL USING (
-        auth.user_role() = 'TEACHER' AND 
-        owner_id = auth.uid()
-    );
+-- Directeur : lecture de tous les quizzes de l’école
+CREATE POLICY p_quizzes_director_select ON public.quizzes
+  FOR SELECT USING (
+    app.jwt_role() = 'DIRECTOR'
+    AND (
+      classroom_id IN (SELECT id FROM public.classrooms WHERE school_id = app.jwt_school_id())
+      OR owner_id IN (SELECT id FROM public.users WHERE school_id = app.jwt_school_id())
+    )
+  );
 
-CREATE POLICY "Teachers can view classroom quizzes" ON quizzes
-    FOR SELECT USING (
-        auth.user_role() = 'TEACHER' AND 
-        classroom_id IN (SELECT id FROM classrooms WHERE teacher_id = auth.uid())
-    );
+-- ============================================================================
+-- QUIZ ITEMS
+-- ============================================================================
+-- Lecture seulement si le quiz parent est accessible (on délègue le contrôle à p_quizzes_*)
+CREATE POLICY p_quiz_items_user_select ON public.quiz_items
+  FOR SELECT USING (
+    EXISTS (SELECT 1 FROM public.quizzes q WHERE q.id = quiz_id)
+    AND quiz_id IN (
+      SELECT q.id FROM public.quizzes q
+      -- les politiques de q s’appliquent automatiquement à ce sous-select
+    )
+  );
 
--- DIRECTORS: Can view all quizzes in their school
-CREATE POLICY "Directors can view school quizzes" ON quizzes
-    FOR SELECT USING (
-        auth.user_role() = 'DIRECTOR' AND 
-        (owner_id IN (SELECT id FROM users WHERE school_id = auth.user_school()) OR
-         classroom_id IN (SELECT id FROM classrooms WHERE school_id = auth.user_school()))
-    );
+-- Enseignant : CRUD sur les items de SES quizzes
+CREATE POLICY p_quiz_items_teacher_all ON public.quiz_items
+  FOR ALL
+  USING (
+    app.jwt_role() = 'TEACHER'
+    AND quiz_id IN (SELECT id FROM public.quizzes WHERE owner_id = auth.uid())
+  )
+  WITH CHECK (
+    app.jwt_role() = 'TEACHER'
+    AND quiz_id IN (SELECT id FROM public.quizzes WHERE owner_id = auth.uid())
+  );
 
---
--- QUIZ ITEMS POLICIES
---
+-- ============================================================================
+-- SUBMISSIONS
+-- ============================================================================
+-- Élève : voir / créer ses remises
+CREATE POLICY p_submissions_student_select ON public.submissions
+  FOR SELECT USING (app.jwt_role() = 'STUDENT' AND student_id = auth.uid());
 
--- ALL USERS: Can view quiz items for quizzes they can access
-CREATE POLICY "Users can view accessible quiz items" ON quiz_items
-    FOR SELECT USING (
-        quiz_id IN (
-            SELECT id FROM quizzes WHERE (
-                -- Self-service quizzes for everyone
-                (owner_id IS NULL AND classroom_id IS NULL AND is_published = true) OR
-                
-                -- Role-specific access
-                CASE auth.user_role()
-                    -- Students: their classroom's published quizzes
-                    WHEN 'STUDENT' THEN 
-                        (classroom_id IN (SELECT classroom_id FROM students WHERE id = auth.uid()) AND is_published = true)
-                    
-                    -- Teachers: their own quizzes or classroom quizzes
-                    WHEN 'TEACHER' THEN 
-                        (owner_id = auth.uid() OR 
-                         classroom_id IN (SELECT id FROM classrooms WHERE teacher_id = auth.uid()))
-                    
-                    -- Directors: all school quizzes
-                    WHEN 'DIRECTOR' THEN 
-                        (owner_id IN (SELECT id FROM users WHERE school_id = auth.user_school()) OR
-                         classroom_id IN (SELECT id FROM classrooms WHERE school_id = auth.user_school()))
-                    
-                    -- Parents: their children's classroom quizzes
-                    WHEN 'PARENT' THEN 
-                        (classroom_id IN (
-                            SELECT classroom_id FROM students 
-                            WHERE parent_id = auth.uid() AND classroom_id IS NOT NULL
-                        ) AND is_published = true)
-                    
-                    ELSE false
-                END
-            )
-        )
-    );
+CREATE POLICY p_submissions_student_insert ON public.submissions
+  FOR INSERT WITH CHECK (app.jwt_role() = 'STUDENT' AND student_id = auth.uid());
 
--- TEACHERS: Can manage quiz items for their quizzes
-CREATE POLICY "Teachers can manage quiz items" ON quiz_items
-    FOR ALL USING (
-        auth.user_role() = 'TEACHER' AND 
-        quiz_id IN (SELECT id FROM quizzes WHERE owner_id = auth.uid())
-    );
+-- Enseignant : voir les remises des quizzes de SES classes
+CREATE POLICY p_submissions_teacher_select ON public.submissions
+  FOR SELECT USING (
+    app.jwt_role() = 'TEACHER'
+    AND quiz_id IN (
+      SELECT q.id FROM public.quizzes q
+      WHERE q.classroom_id IN (SELECT id FROM public.classrooms WHERE teacher_id = auth.uid())
+    )
+  );
 
---
--- SUBMISSIONS POLICIES
---
+-- Parent : voir les remises de ses enfants
+CREATE POLICY p_submissions_parent_select ON public.submissions
+  FOR SELECT USING (
+    app.jwt_role() = 'PARENT'
+    AND student_id IN (SELECT id FROM public.students WHERE parent_id = auth.uid())
+  );
 
--- STUDENTS: Can view and create their own submissions
-CREATE POLICY "Students can view own submissions" ON submissions
-    FOR SELECT USING (auth.user_role() = 'STUDENT' AND student_id = auth.uid());
+-- Directeur : voir toutes les remises de l’école
+CREATE POLICY p_submissions_director_select ON public.submissions
+  FOR SELECT USING (
+    app.jwt_role() = 'DIRECTOR'
+    AND quiz_id IN (
+      SELECT id FROM public.quizzes
+      WHERE classroom_id IN (SELECT id FROM public.classrooms WHERE school_id = app.jwt_school_id())
+         OR owner_id   IN (SELECT id FROM public.users      WHERE school_id = app.jwt_school_id())
+    )
+  );
 
-CREATE POLICY "Students can create submissions" ON submissions
-    FOR INSERT WITH CHECK (auth.user_role() = 'STUDENT' AND student_id = auth.uid());
+-- ============================================================================
+-- INVITATION LINKS
+-- ============================================================================
+CREATE POLICY p_invites_director_all ON public.invitation_links
+  FOR ALL
+  USING     (app.jwt_role() = 'DIRECTOR' AND school_id = app.jwt_school_id())
+  WITH CHECK(app.jwt_role() = 'DIRECTOR' AND school_id = app.jwt_school_id());
 
--- TEACHERS: Can view submissions for quizzes in their classrooms
-CREATE POLICY "Teachers can view classroom submissions" ON submissions
-    FOR SELECT USING (
-        auth.user_role() = 'TEACHER' AND 
-        quiz_id IN (
-            SELECT id FROM quizzes 
-            WHERE classroom_id IN (SELECT id FROM classrooms WHERE teacher_id = auth.uid())
-        )
-    );
-
--- PARENTS: Can view their children's submissions
-CREATE POLICY "Parents can view children submissions" ON submissions
-    FOR SELECT USING (
-        auth.user_role() = 'PARENT' AND 
-        student_id IN (SELECT id FROM students WHERE parent_id = auth.uid())
-    );
-
--- DIRECTORS: Can view all submissions in their school
-CREATE POLICY "Directors can view school submissions" ON submissions
-    FOR SELECT USING (
-        auth.user_role() = 'DIRECTOR' AND 
-        quiz_id IN (
-            SELECT id FROM quizzes WHERE 
-            (owner_id IN (SELECT id FROM users WHERE school_id = auth.user_school()) OR
-             classroom_id IN (SELECT id FROM classrooms WHERE school_id = auth.user_school()))
-        )
-    );
-
---
--- INVITATION LINKS POLICIES
---
-
--- DIRECTORS: Can manage invitation links for their school
-CREATE POLICY "Directors can manage invitation links" ON invitation_links
-    FOR ALL USING (
-        auth.user_role() = 'DIRECTOR' AND 
-        school_id = auth.user_school()
-    );
-
--- EVERYONE: Can view valid (unexpired, unused) invitation links
-CREATE POLICY "Anyone can view valid invitation links" ON invitation_links
-    FOR SELECT USING (expires_at > now() AND used_at IS NULL);
+CREATE POLICY p_invites_public_select ON public.invitation_links
+  FOR SELECT USING (expires_at > now() AND used_at IS NULL);
