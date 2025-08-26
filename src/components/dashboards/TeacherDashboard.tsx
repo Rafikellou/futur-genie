@@ -128,7 +128,7 @@ export function TeacherDashboard() {
       
       setError(null)
     } catch (error: any) {
-      setError(error.message || 'Erreur lors du chargement des données')
+      setError('Erreur lors du chargement des données')
     } finally {
       setLoading(false)
     }
@@ -150,10 +150,11 @@ export function TeacherDashboard() {
     return { totalClassrooms, totalStudents, averageStudentsPerClass }
   }
   
-  if (loading) {
+  // Show full-screen loader only when profile is not yet available
+  if (!profile) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <Loader2 className="h-8 w-8 animate-spin" />
+        <Loader2 data-testid="loading-spinner" className="h-8 w-8 animate-spin" />
       </div>
     )
   }
@@ -180,6 +181,12 @@ export function TeacherDashboard() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-8">
+        {loading && (
+          <div className="mb-4 flex items-center text-sm text-gray-600" role="status">
+            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            Chargement des données...
+          </div>
+        )}
         {error && (
           <Alert variant="destructive" className="mb-6">
             <AlertDescription>{error}</AlertDescription>
@@ -188,12 +195,12 @@ export function TeacherDashboard() {
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid w-full grid-cols-6">
-            <TabsTrigger value="overview">Vue d'ensemble</TabsTrigger>
-            <TabsTrigger value="ai-quiz">Assistant IA</TabsTrigger>
-            <TabsTrigger value="quizzes">Mes Quiz</TabsTrigger>
-            <TabsTrigger value="analytics">Analyses</TabsTrigger>
-            <TabsTrigger value="classrooms">Mes Classes</TabsTrigger>
-            <TabsTrigger value="results">Résultats</TabsTrigger>
+            <TabsTrigger value="overview" onClick={() => setActiveTab('overview')}>Vue d'ensemble</TabsTrigger>
+            <TabsTrigger value="ai-quiz" onClick={() => setActiveTab('ai-quiz')}>Assistant IA</TabsTrigger>
+            <TabsTrigger value="quizzes" onClick={() => setActiveTab('quizzes')}>Mes Quiz</TabsTrigger>
+            <TabsTrigger value="analytics" onClick={() => setActiveTab('analytics')}>Analyses</TabsTrigger>
+            <TabsTrigger value="classrooms" onClick={() => setActiveTab('classrooms')}>Mes Classes</TabsTrigger>
+            <TabsTrigger value="results" onClick={() => setActiveTab('results')}>Résultats</TabsTrigger>
           </TabsList>
           
           <TabsContent value="overview" className="space-y-6">
@@ -223,7 +230,7 @@ export function TeacherDashboard() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-bold">{totalClassrooms}</div>
+                  <div className="text-3xl font-bold">{totalClassrooms} {totalClassrooms === 1 ? 'classe' : 'classes'}</div>
                   <div className="text-green-100 text-sm">
                     {totalStudents} élèves au total
                   </div>
@@ -267,148 +274,53 @@ export function TeacherDashboard() {
                     Activité cette semaine
                   </div>
                   <div className="text-orange-100 text-xs mt-1">
-                    {engagementStats.totalSubmissions > 0 ? 
-                      `${((engagementStats.thisWeekSubmissions / engagementStats.totalSubmissions) * 100).toFixed(1)}% du total` : 
-                      'Aucune activité'
-                    }
+                    {engagementStats.totalSubmissions > 0 ? `${engagementStats.totalSubmissions} réponses au total` : 'Aucune réponse encore'}
                   </div>
                 </CardContent>
               </Card>
             </div>
 
-            {/* Engagement Overview */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <BarChart3 className="h-5 w-5 mr-2" />
-                    Vue d'ensemble des Quiz
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">Quiz publiés</span>
-                    <span className="text-sm text-gray-600">{engagementStats.publishedQuizzes}/{engagementStats.totalQuizzes}</span>
-                  </div>
-                  <Progress value={(engagementStats.publishedQuizzes / Math.max(engagementStats.totalQuizzes, 1)) * 100} className="h-2" />
-                  
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">Engagement récent</span>
-                    <span className="text-sm text-gray-600">{engagementStats.thisWeekSubmissions} soumissions</span>
-                  </div>
-                  <Progress value={Math.min((engagementStats.thisWeekSubmissions / Math.max(totalStudents, 1)) * 100, 100)} className="h-2" />
-                  
-                  <div className="grid grid-cols-2 gap-4 mt-4">
-                    <div className="text-center p-3 bg-blue-50 rounded-lg">
-                      <div className="text-lg font-bold text-blue-600">{engagementStats.publishedQuizzes}</div>
-                      <div className="text-xs text-blue-500">Quiz Actifs</div>
-                    </div>
-                    <div className="text-center p-3 bg-green-50 rounded-lg">
-                      <div className="text-lg font-bold text-green-600">{engagementStats.totalSubmissions}</div>
-                      <div className="text-xs text-green-500">Total Réponses</div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Calendar className="h-5 w-5 mr-2" />
-                    Activité Récente
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {engagementStats.totalSubmissions > 0 ? (
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-600">Cette semaine</span>
-                        <span className="font-medium">{engagementStats.thisWeekSubmissions} soumissions</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-600">Quiz publiés</span>
-                        <span className="font-medium">{engagementStats.publishedQuizzes}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-600">Brouillons</span>
-                        <span className="font-medium">{engagementStats.draftQuizzes}</span>
-                      </div>
-                      <div className="pt-3 border-t">
-                        <div className="text-sm text-gray-600 mb-2">Taux d'engagement hebdomadaire</div>
-                        <div className="flex items-center">
-                          <Progress 
-                            value={Math.min((engagementStats.thisWeekSubmissions / Math.max(totalStudents, 1)) * 100, 100)} 
-                            className="flex-1 h-2" 
-                          />
-                          <span className="text-sm font-medium ml-2">
-                            {totalStudents > 0 ? 
-                              `${Math.round((engagementStats.thisWeekSubmissions / totalStudents) * 100)}%` : 
-                              '0%'
-                            }
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-center py-6">
-                      <BarChart3 className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                      <p className="text-gray-500">Aucune activité récente</p>
-                      <p className="text-sm text-gray-400">Créez un quiz pour commencer</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-            
             {/* Quick Actions */}
             <Card>
-              <CardHeader>
-                <CardTitle>Actions Rapides</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                  <Button 
-                    onClick={() => setActiveTab('ai-quiz')} 
-                    className="h-20 flex-col bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-                  >
-                    <Bot className="h-6 w-6 mb-2" />
-                    Assistant IA
-                  </Button>
-                  <Button 
-                    onClick={() => setActiveTab('quizzes')} 
-                    variant="outline"
-                    className="h-20 flex-col"
-                  >
-                    <Plus className="h-6 w-6 mb-2" />
-                    Créer un Quiz
-                  </Button>
-                  <Button 
-                    onClick={() => setActiveTab('analytics')} 
-                    variant="outline" 
-                    className="h-20 flex-col"
-                  >
-                    <BarChart3 className="h-6 w-6 mb-2" />
-                    Analyses
-                  </Button>
-                  <Button 
-                    onClick={() => setActiveTab('classrooms')} 
-                    variant="outline" 
-                    className="h-20 flex-col"
-                  >
-                    <Users className="h-6 w-6 mb-2" />
-                    Voir mes Classes
-                  </Button>
-                  <Button 
-                    onClick={() => setActiveTab('results')} 
-                    variant="outline" 
-                    className="h-20 flex-col"
-                  >
-                    <BarChart3 className="h-6 w-6 mb-2" />
-                    Analyser Résultats
-                  </Button>
-                </div>
+              <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <Button 
+                  onClick={() => setActiveTab('ai-quiz')}
+                  className="h-20 flex-col bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                >
+                  <Bot className="h-6 w-6 mb-2" />
+                  Assistant IA
+                </Button>
+                <Button 
+                  onClick={() => setActiveTab('quizzes')} 
+                  variant="outline"
+                  className="h-20 flex-col"
+                >
+                  <Plus className="h-6 w-6 mb-2" />
+                  Créer un Quiz
+                </Button>
+                <Button 
+                  onClick={() => setActiveTab('analytics')} 
+                  variant="outline" 
+                  className="h-20 flex-col"
+                >
+                  <BarChart3 className="h-6 w-6 mb-2" />
+                  Analyses
+                </Button>
               </CardContent>
             </Card>
+
+            {/* Overview empty quiz hint when there is no quiz at all */}
+            {activeTab === 'overview' && quizzes.length === 0 && (
+              <Card>
+                <CardContent className="flex items-center justify-center py-12">
+                  <div className="text-center">
+                    <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">Aucun quiz</h3>
+                    <p className="text-gray-600">Commencez par créer votre premier quiz</p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
           
           <TabsContent value="ai-quiz">
@@ -430,19 +342,21 @@ export function TeacherDashboard() {
               </div>
               
               {quizzes.length === 0 ? (
-                <Card>
-                  <CardContent className="flex items-center justify-center py-12">
-                    <div className="text-center">
-                      <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">Aucun quiz</h3>
-                      <p className="text-gray-600 mb-4">Commencez par créer votre premier quiz</p>
-                      <Button>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Créer un quiz
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
+                activeTab === 'quizzes' ? (
+                  <Card>
+                    <CardContent className="flex items-center justify-center py-12">
+                      <div className="text-center">
+                        <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                        <h3 className="text-lg font-medium text-gray-900 mb-2">Aucun quiz</h3>
+                        <p className="text-gray-600 mb-4">Commencez par créer votre premier quiz</p>
+                        <Button>
+                          <Plus className="h-4 w-4 mr-2" />
+                          Créer un quiz
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ) : null
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {quizzes.map((quiz) => (

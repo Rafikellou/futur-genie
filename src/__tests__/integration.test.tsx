@@ -41,7 +41,7 @@ describe('UI Components Integration', () => {
 // Test form validation logic
 describe('Form Validation Logic', () => {
   const validateEmail = (email: string): boolean => {
-    const emailRegex = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     return emailRegex.test(email)
   }
 
@@ -57,7 +57,7 @@ describe('Form Validation Logic', () => {
     if (!/[a-z]/.test(password)) {
       errors.push('Password must contain at least one lowercase letter')
     }
-    if (!/\\d/.test(password)) {
+    if (!/\d/.test(password)) {
       errors.push('Password must contain at least one number')
     }
     
@@ -259,14 +259,18 @@ describe('Utility Functions', () => {
   const formatDate = (date: Date): string => {
     return date.toLocaleDateString('fr-FR')
   }
-
   const slugify = (text: string): string => {
-    return text
+    // Normalize and remove diacritics, keep alphanumerics, spaces and dashes
+    const normalized = text
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
       .toLowerCase()
-      .replace(/[^a-z0-9 -]/g, '')
+      .replace(/[^a-z0-9\s-]/g, '')
       .replace(/\s+/g, '-')
       .replace(/-+/g, '-')
+      .replace(/^-+|-+$/g, '')
       .trim()
+    return normalized
   }
 
   const generateQuizCode = (length: number = 8): string => {
@@ -281,7 +285,7 @@ describe('Utility Functions', () => {
   describe('Date Formatting', () => {
     it('should format dates correctly', () => {
       const testDate = new Date('2024-01-15')
-      expect(formatDate(testDate)).toMatch(/\\d{2}\\/\\d{2}\\/\\d{4}/)
+      expect(formatDate(testDate)).toMatch(/\d{2}\/\d{2}\/\d{4}/)
     })
   })
 
@@ -289,7 +293,7 @@ describe('Utility Functions', () => {
     it('should create valid slugs', () => {
       expect(slugify('Hello World')).toBe('hello-world')
       expect(slugify('Math Quiz #1')).toBe('math-quiz-1')
-      expect(slugify('français & english')).toBe('franais-english')
+      expect(slugify('français & english')).toBe('francais-english')
     })
 
     it('should handle edge cases', () => {
@@ -329,11 +333,11 @@ describe('Component Integration', () => {
   }) => {
     return (
       <div>
-        <div role=\"tablist\">
+        <div role="tablist">
           {tabs.map(tab => (
             <button
               key={tab.id}
-              role=\"tab\"
+              role="tab"
               aria-selected={activeTab === tab.id}
               onClick={() => onTabChange(tab.id)}
             >
@@ -341,7 +345,7 @@ describe('Component Integration', () => {
             </button>
           ))}
         </div>
-        <div role=\"tabpanel\">
+        <div role="tabpanel">
           {tabs.find(tab => tab.id === activeTab)?.content || 'No content'}
         </div>
       </div>
@@ -357,7 +361,7 @@ describe('Component Integration', () => {
 
     render(
       <TabComponent
-        activeTab=\"tab1\"
+        activeTab="tab1"
         onTabChange={mockOnTabChange}
         tabs={tabs}
       />
@@ -379,7 +383,7 @@ describe('Component Integration', () => {
 
     render(
       <TabComponent
-        activeTab=\"tab1\"
+        activeTab="tab1"
         onTabChange={jest.fn()}
         tabs={tabs}
       />

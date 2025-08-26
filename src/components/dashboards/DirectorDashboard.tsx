@@ -23,7 +23,7 @@ import {
   Activity
 } from 'lucide-react'
 import { ClassroomManagement } from '@/components/director/ClassroomManagement'
-import { TeacherManagement } from '@/components/director/TeacherManagement'
+import { UserManagement } from '@/components/director/UserManagement'
 import { InvitationManagement } from '@/components/director/InvitationManagement'
 import { 
   getUsersBySchool, 
@@ -87,7 +87,7 @@ export function DirectorDashboard() {
       
     } catch (error: any) {
       console.error('Error fetching stats:', error)
-      setError(error.message || 'Erreur lors du chargement des statistiques')
+      setError('Erreur lors du chargement des statistiques')
     } finally {
       setLoading(false)
     }
@@ -108,6 +108,15 @@ export function DirectorDashboard() {
     if (diffInHours < 24) return `Il y a ${diffInHours}h`
     const diffInDays = Math.floor(diffInHours / 24)
     return `Il y a ${diffInDays}j`
+  }
+
+  // Full-screen loader when profile is not yet available (initial app load)
+  if (!profile) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Loader2 data-testid="loading-spinner" className="h-8 w-8 animate-spin" />
+      </div>
+    )
   }
 
   return (
@@ -133,7 +142,7 @@ export function DirectorDashboard() {
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="overview">Vue d'ensemble</TabsTrigger>
             <TabsTrigger value="classrooms">Classes</TabsTrigger>
-            <TabsTrigger value="teachers">Enseignants</TabsTrigger>
+            <TabsTrigger value="users">Utilisateurs</TabsTrigger>
             <TabsTrigger value="invitations">Invitations</TabsTrigger>
           </TabsList>
           
@@ -179,19 +188,35 @@ export function DirectorDashboard() {
                       <Users className="h-5 w-5 mr-2" />
                       Personnel
                     </div>
-                    <Badge variant="secondary">{stats.totalTeachers}</Badge>
+                    <Badge variant="secondary">
+                      {stats.totalTeachers === 0 ? 'Aucun enseignant' : `${stats.totalTeachers} enseignants`}
+                    </Badge>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
-                    {loading ? <Loader2 className="h-6 w-6 animate-spin" /> : stats.totalTeachers + stats.totalParents}
+                    {loading ? (
+                      <Loader2 className="h-6 w-6 animate-spin" />
+                    ) : (() => {
+                      const val = (stats as any).totalUsers ?? (stats.totalTeachers + stats.totalParents)
+                      return val === 0 ? '—' : val
+                    })()}
                   </div>
                   <p className="text-gray-600 text-sm">
                     {stats.totalTeachers} enseignants, {stats.totalParents} parents
                   </p>
                   <div className="flex mt-2 space-x-1">
-                    <div className="flex-1 bg-blue-200 h-2 rounded" style={{width: `${(stats.totalTeachers / (stats.totalTeachers + stats.totalParents)) * 100}%`}}></div>
-                    <div className="flex-1 bg-orange-200 h-2 rounded" style={{width: `${(stats.totalParents / (stats.totalTeachers + stats.totalParents)) * 100}%`}}></div>
+                    {(() => {
+                      const denom = stats.totalTeachers + stats.totalParents
+                      const tPct = denom > 0 ? (stats.totalTeachers / denom) * 100 : 0
+                      const pPct = denom > 0 ? (stats.totalParents / denom) * 100 : 0
+                      return (
+                        <>
+                          <div className="flex-1 bg-blue-200 h-2 rounded" style={{ width: `${tPct}%` }}></div>
+                          <div className="flex-1 bg-orange-200 h-2 rounded" style={{ width: `${pPct}%` }}></div>
+                        </>
+                      )
+                    })()}
                   </div>
                 </CardContent>
               </Card>
@@ -208,7 +233,7 @@ export function DirectorDashboard() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
-                    {loading ? <Loader2 className="h-6 w-6 animate-spin" /> : stats.totalStudents}
+                    {loading ? <Loader2 className="h-6 w-6 animate-spin" /> : (stats.totalStudents === 0 ? '—' : stats.totalStudents)}
                   </div>
                   <p className="text-gray-600 text-sm">Élèves inscrits</p>
                   <div className="mt-2">
@@ -230,15 +255,25 @@ export function DirectorDashboard() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">
-                    {loading ? <Loader2 className="h-6 w-6 animate-spin" /> : stats.totalQuizzes}
-                  </div>
-                  <p className="text-gray-600 text-sm">
-                    {stats.publishedQuizzes} publiés, {stats.totalQuizzes - stats.publishedQuizzes} brouillons
-                  </p>
-                  <div className="mt-2">
-                    <Progress value={stats.totalQuizzes > 0 ? (stats.publishedQuizzes / stats.totalQuizzes) * 100 : 0} className="h-2" />
-                  </div>
+                  {(() => {
+                    const totalQuizzes = stats.totalQuizzes ?? 0
+                    const published = stats.publishedQuizzes ?? 0
+                    const unpublished = Math.max(totalQuizzes - published, 0)
+                    const pct = totalQuizzes > 0 ? (published / totalQuizzes) * 100 : 0
+                    return (
+                      <>
+                        <div className="text-2xl font-bold">
+                          {loading ? <Loader2 className="h-6 w-6 animate-spin" /> : (totalQuizzes === 0 ? '—' : totalQuizzes)}
+                        </div>
+                        <p className="text-gray-600 text-sm">
+                          {published} publiés, {unpublished} brouillons
+                        </p>
+                        <div className="mt-2">
+                          <Progress value={pct} className="h-2" />
+                        </div>
+                      </>
+                    )
+                  })()}
                 </CardContent>
               </Card>
             </div>
@@ -345,11 +380,14 @@ export function DirectorDashboard() {
                             <div className="text-xs text-gray-500">{activity.quiz?.title}</div>
                           </div>
                           <div className="text-right">
-                            <div className={`font-bold text-sm ${getScoreColor(
-                              Math.round((activity.score / activity.total_questions) * 100)
-                            )}`}>
-                              {Math.round((activity.score / activity.total_questions) * 100)}%
-                            </div>
+                            {(() => {
+                              const pct = activity.total_questions > 0 ? Math.round((activity.score / activity.total_questions) * 100) : 0
+                              return (
+                                <div className={`font-bold text-sm ${getScoreColor(pct)}`}>
+                                  {pct}%
+                                </div>
+                              )
+                            })()}
                             <div className="text-xs text-gray-500">
                               {formatTimeAgo(activity.created_at)}
                             </div>
@@ -404,18 +442,19 @@ export function DirectorDashboard() {
               </Card>
             </div>
           </TabsContent>
-          
+
           <TabsContent value="classrooms">
             <ClassroomManagement />
           </TabsContent>
-          
-          <TabsContent value="teachers">
-            <TeacherManagement />
+
+          <TabsContent value="users" forceMount>
+            <UserManagement />
           </TabsContent>
-          
+
           <TabsContent value="invitations">
             <InvitationManagement />
           </TabsContent>
+
         </Tabs>
       </main>
     </div>

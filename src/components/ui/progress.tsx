@@ -19,6 +19,10 @@ const Progress = React.forwardRef<HTMLDivElement, ProgressProps>(
           "relative h-2 w-full overflow-hidden rounded-full bg-gray-200",
           className
         )}
+        role="progressbar"
+        aria-valuenow={Math.round(percentage)}
+        aria-valuemin={0}
+        aria-valuemax={100}
         {...props}
       >
         <div

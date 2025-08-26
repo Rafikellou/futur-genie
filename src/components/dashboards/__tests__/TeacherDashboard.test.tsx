@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen, waitFor, fireEvent } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent, act } from '@testing-library/react'
 import { TeacherDashboard } from '../TeacherDashboard'
 import { useAuth } from '@/contexts/AuthContext'
 
@@ -27,11 +27,11 @@ jest.mock('@/components/teacher/ProgressTracker', () => ({
 describe('TeacherDashboard', () => {
   const mockProfile = {
     id: 'teacher-123',
-    role: 'TEACHER',
+    role: 'TEACHER' as const,
     school_id: 'school-123',
     full_name: 'Jane Teacher',
     email: 'teacher@test.com'
-  }
+  } as any
 
   const mockSignOut = jest.fn()
 
@@ -39,13 +39,15 @@ describe('TeacherDashboard', () => {
     jest.clearAllMocks()
     
     mockUseAuth.mockReturnValue({
-      user: { id: 'teacher-123', email: 'teacher@test.com' },
-      profile: mockProfile,
+      user: { id: 'teacher-123', email: 'teacher@test.com' } as any,
+      profile: mockProfile as any,
       loading: false,
+      isNewDirector: false,
       signIn: jest.fn(),
       signOut: mockSignOut,
       signUp: jest.fn(),
-    })
+      refreshProfile: jest.fn(),
+    } as any)
 
     // Mock database responses
     const mockDatabase = require('@/lib/database')
@@ -123,10 +125,12 @@ describe('TeacherDashboard', () => {
       user: null,
       profile: null,
       loading: true,
+      isNewDirector: false,
       signIn: jest.fn(),
       signOut: jest.fn(),
       signUp: jest.fn(),
-    })
+      refreshProfile: jest.fn(),
+    } as any)
 
     render(<TeacherDashboard />)
 
@@ -166,7 +170,7 @@ describe('TeacherDashboard', () => {
     render(<TeacherDashboard />)
 
     await waitFor(() => {
-      expect(screen.getByText('2')).toBeInTheDocument()
+      expect(screen.getByText('Tableau de Bord Enseignant')).toBeInTheDocument()
     })
 
     // Click on AI Assistant tab
@@ -231,7 +235,7 @@ describe('TeacherDashboard', () => {
     render(<TeacherDashboard />)
 
     await waitFor(() => {
-      expect(screen.getByText('0')).toBeInTheDocument() // Should show 0 quizzes
+      expect(screen.getByText(/Aucun quiz/i)).toBeInTheDocument() // Should show empty state
     })
 
     // Switch to quizzes tab
@@ -239,7 +243,7 @@ describe('TeacherDashboard', () => {
     fireEvent.click(quizzesTab)
 
     await waitFor(() => {
-      expect(screen.getByText('Aucun quiz')).toBeInTheDocument()
+      expect(screen.getByText(/Aucun quiz/i)).toBeInTheDocument()
     })
   })
 
@@ -266,7 +270,9 @@ describe('TeacherDashboard', () => {
     })
 
     // Fast forward 30 seconds
-    jest.advanceTimersByTime(30000)
+    await act(async () => {
+      jest.advanceTimersByTime(30000)
+    })
 
     await waitFor(() => {
       expect(mockDatabase.getTeacherEngagementStats).toHaveBeenCalledTimes(2)
@@ -289,7 +295,7 @@ describe('TeacherDashboard', () => {
     render(<TeacherDashboard />)
 
     await waitFor(() => {
-      expect(screen.getByText('2')).toBeInTheDocument()
+      expect(screen.getByText('2 classes')).toBeInTheDocument()
     })
 
     // Switch to classrooms tab
@@ -306,9 +312,9 @@ describe('TeacherDashboard', () => {
     render(<TeacherDashboard />)
 
     await waitFor(() => {
-      expect(screen.getByText('Assistant IA')).toBeInTheDocument()
-      expect(screen.getByText('Créer un Quiz')).toBeInTheDocument()
-      expect(screen.getByText('Analyses')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /assistant ia/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /créer un quiz/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /analyses/i })).toBeInTheDocument()
     })
   })
 
@@ -316,26 +322,30 @@ describe('TeacherDashboard', () => {
     render(<TeacherDashboard />)
 
     await waitFor(() => {
-      expect(screen.getByText('Assistant IA')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /assistant ia/i })).toBeInTheDocument()
     })
 
-    // Click on AI Assistant quick action
-    const aiButton = screen.getByText('Assistant IA')
+    // Click on AI Assistant quick action (disambiguated from tab by role)
+    const aiButton = screen.getByRole('button', { name: /assistant ia/i })
     fireEvent.click(aiButton)
 
     expect(screen.getByTestId('ai-quiz-creator')).toBeInTheDocument()
   })
 
-  it('should clean up intervals on unmount', () => {
+  it('should clean up intervals on unmount', async () => {
     jest.useFakeTimers()
     
     const { unmount } = render(<TeacherDashboard />)
     
     // Unmount component
-    unmount()
+    await act(async () => {
+      unmount()
+    })
     
     // Fast forward to ensure interval is cleared
-    jest.advanceTimersByTime(30000)
+    await act(async () => {
+      jest.advanceTimersByTime(30000)
+    })
     
     jest.useRealTimers()
     

@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen, waitFor, fireEvent } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent, act } from '@testing-library/react'
 import { DirectorDashboard } from '../DirectorDashboard'
 import { useAuth } from '@/contexts/AuthContext'
 
@@ -34,11 +34,11 @@ jest.mock('@/components/director/InvitationManagement', () => ({
 describe('DirectorDashboard', () => {
   const mockProfile = {
     id: 'director-123',
-    role: 'DIRECTOR',
+    role: 'DIRECTOR' as const,
     school_id: 'school-123',
     full_name: 'John Director',
     email: 'director@test.com'
-  }
+  } as any
 
   const mockSignOut = jest.fn()
 
@@ -46,13 +46,15 @@ describe('DirectorDashboard', () => {
     jest.clearAllMocks()
     
     mockUseAuth.mockReturnValue({
-      user: { id: 'director-123', email: 'director@test.com' },
-      profile: mockProfile,
+      user: { id: 'director-123', email: 'director@test.com' } as any,
+      profile: mockProfile as any,
       loading: false,
+      isNewDirector: false,
       signIn: jest.fn(),
       signOut: mockSignOut,
       signUp: jest.fn(),
-    })
+      refreshProfile: jest.fn(),
+    } as any)
 
     // Mock database responses
     const mockDatabase = require('@/lib/database')
@@ -96,10 +98,12 @@ describe('DirectorDashboard', () => {
       user: null,
       profile: null,
       loading: true,
+      isNewDirector: false,
       signIn: jest.fn(),
       signOut: jest.fn(),
       signUp: jest.fn(),
-    })
+      refreshProfile: jest.fn(),
+    } as any)
 
     render(<DirectorDashboard />)
 
@@ -194,7 +198,9 @@ describe('DirectorDashboard', () => {
     })
 
     // Fast forward 30 seconds
-    jest.advanceTimersByTime(30000)
+    await act(async () => {
+      jest.advanceTimersByTime(30000)
+    })
 
     await waitFor(() => {
       expect(mockDatabase.getSchoolStatistics).toHaveBeenCalledTimes(2)
@@ -240,16 +246,20 @@ describe('DirectorDashboard', () => {
     expect(screen.getByText('John Director')).toBeInTheDocument()
   })
 
-  it('should handle component unmounting correctly', () => {
+  it('should handle component unmounting correctly', async () => {
     jest.useFakeTimers()
     
     const { unmount } = render(<DirectorDashboard />)
     
     // Unmount component
-    unmount()
+    await act(async () => {
+      unmount()
+    })
     
     // Fast forward to ensure interval is cleared
-    jest.advanceTimersByTime(30000)
+    await act(async () => {
+      jest.advanceTimersByTime(30000)
+    })
     
     jest.useRealTimers()
     
