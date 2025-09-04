@@ -2,14 +2,29 @@
 
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
-import { Button } from '@/components/ui/button'
+import { useRouter } from 'next/navigation'
+import { getSubmissionsByParent, getParentStats, getAvailableQuizzesForParent } from '@/lib/database'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Progress } from '@/components/ui/progress'
-import { Users, LogOut, User, BarChart3, Calendar, Trophy, BookOpen, TrendingUp, Clock, Star, Loader2, Plus } from 'lucide-react'
-import { getSubmissionsByParent, getParentStats, getAvailableQuizzesForParent } from '@/lib/database'
+import { 
+  BookOpen, 
+  Trophy, 
+  Clock, 
+  TrendingUp, 
+  Star,
+  Calendar,
+  CheckCircle,
+  AlertCircle,
+  User,
+  Users,
+  Loader2,
+  LogOut,
+  BarChart3
+} from 'lucide-react'
 
 interface Submission {
   id: string
@@ -29,6 +44,7 @@ interface Submission {
 
 export function ParentDashboard() {
   const { profile, signOut } = useAuth()
+  const router = useRouter()
   const [activeTab, setActiveTab] = useState('overview')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -165,8 +181,8 @@ export function ParentDashboard() {
                             <Button 
                               className="w-full bg-orange-600 hover:bg-orange-700"
                               onClick={() => {
-                                // TODO: Navigate to quiz taking page
-                                window.location.href = `/quiz/${quiz.id}`
+                                console.log('Navigating to quiz:', quiz.id)
+                                router.push(`/quiz/${quiz.id}`)
                               }}
                             >
                               Commencer le Quiz

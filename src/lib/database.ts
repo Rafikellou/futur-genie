@@ -234,25 +234,29 @@ export async function getQuizzesByClassroom(classroomId: string) {
 }
 
 export async function getQuizWithItems(quizId: string) {
-  const { data: quiz, error: quizError } = await supabase
-    .from('quizzes')
-    .select('*')
-    .eq('id', quizId)
-    .single()
+  try {
+    const { data: session } = await supabase.auth.getSession()
+    if (!session.session?.access_token) {
+      throw new Error('No active session')
+    }
 
-  if (quizError) throw quizError
+    const res = await fetch(`/api/quiz/${quizId}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${session.session.access_token}`,
+        'Content-Type': 'application/json',
+      },
+    })
 
-  const { data: items, error: itemsError } = await supabase
-    .from('quiz_items')
-    .select('*')
-    .eq('quiz_id', quizId)
-    .order('order_index')
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err?.error || 'Failed to fetch quiz')
+    }
 
-  if (itemsError) throw itemsError
-
-  return { 
-    ...quiz as any, 
-    items: items || [] 
+    return await res.json()
+  } catch (error) {
+    console.error('Error fetching quiz with items:', error)
+    throw error
   }
 }
 
@@ -328,14 +332,31 @@ export async function deleteQuizItem(id: string) {
 
 // Submission operations
 export async function createSubmission(submissionData: TablesInsert<'submissions'>) {
-  const { data, error } = await supabase
-    .from('submissions')
-    .insert(submissionData as any)
-    .select()
-    .single()
+  try {
+    const { data: session } = await supabase.auth.getSession()
+    if (!session.session?.access_token) {
+      throw new Error('No active session')
+    }
 
-  if (error) throw error
-  return data
+    const res = await fetch('/api/submissions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${session.session.access_token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(submissionData),
+    })
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err?.error || 'Failed to create submission')
+    }
+
+    return await res.json()
+  } catch (error) {
+    console.error('Error creating submission:', error)
+    throw error
+  }
 }
 
 export async function getSubmissionsByParent(parentId: string): Promise<TablesRow<'submissions'>[]> {

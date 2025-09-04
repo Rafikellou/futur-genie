@@ -20,7 +20,17 @@ export function ProtectedRoute({
   const router = useRouter()
   const pathname = usePathname()
 
+  console.log('ProtectedRoute check:', { 
+    pathname, 
+    loading, 
+    user: !!user, 
+    profile: profile ? { id: profile.id, role: profile.role } : null, 
+    allowedRoles, 
+    isNewDirector 
+  })
+
   if (loading) {
+    console.log('ProtectedRoute: Still loading auth state')
     return (
       <div className="flex items-center justify-center h-screen">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -29,6 +39,7 @@ export function ProtectedRoute({
   }
 
   if (!user || !profile) {
+    console.log('ProtectedRoute: No user or profile, redirecting to /')
     // Redirect to login if not authenticated
     if (typeof window !== 'undefined') {
       router.push('/')
@@ -38,6 +49,7 @@ export function ProtectedRoute({
 
   // Check if user is a new director and needs to create a school (fallback)
   if (isNewDirector && pathname !== '/create-school') {
+    console.log('ProtectedRoute: New director, redirecting to /create-school')
     // Redirect to school creation page as fallback
     if (typeof window !== 'undefined') {
       router.push('/create-school')
@@ -51,8 +63,10 @@ export function ProtectedRoute({
   }
 
   if (allowedRoles.length > 0 && !allowedRoles.includes(profile.role)) {
+    console.log('ProtectedRoute: Role not allowed', { userRole: profile.role, allowedRoles })
     return fallback
   }
 
+  console.log('ProtectedRoute: Access granted, rendering children')
   return <>{children}</>
 }

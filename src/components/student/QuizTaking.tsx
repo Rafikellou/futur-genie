@@ -66,6 +66,9 @@ export function QuizTaking({ quizId, onComplete, onExit }: QuizTakingProps) {
   const [quiz, setQuiz] = useState<Quiz | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // Debug logging
+  console.log('QuizTaking component mounted:', { quizId, profile, claims, canSubmit })
   
   // Quiz state
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
@@ -238,6 +241,7 @@ export function QuizTaking({ quizId, onComplete, onExit }: QuizTakingProps) {
   }
 
   if (!canSubmit) {
+    console.log('Permission denied - redirecting user back')
     return (
       <Card className="max-w-2xl mx-auto p-8">
         <CardHeader>
@@ -248,6 +252,7 @@ export function QuizTaking({ quizId, onComplete, onExit }: QuizTakingProps) {
         </CardHeader>
         <CardContent>
           <p>Vous n'avez pas les permissions nécessaires pour passer ce quiz.</p>
+          <p className="text-sm text-gray-600 mt-2">Role: {claims?.role}, CanSubmit: {canSubmit.toString()}</p>
           <Button onClick={() => onExit?.() || window.history.back()} className="mt-4">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Retour
