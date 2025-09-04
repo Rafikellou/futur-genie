@@ -42,11 +42,7 @@ export async function GET(req: NextRequest) {
         classroom:classrooms(
           id,
           name,
-          grade,
-          teacher:users!teacher_id(
-            id,
-            full_name
-          )
+          grade
         )
       `)
       .eq('classroom_id', claims.classroomId)
@@ -59,9 +55,33 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch quizzes', details: error.message }, { status: 500 })
     }
 
-    console.log('Successfully fetched quizzes:', { count: quizzes?.length, classroomId: claims.classroomId })
+    // Get teacher info separately for the classroom
+    let teacherName = 'votre enseignant(e)'
+    if (quizzes && quizzes.length > 0) {
+      const { data: teacher } = await admin
+        .from('users')
+        .select('full_name')
+        .eq('classroom_id', claims.classroomId)
+        .eq('role', 'TEACHER')
+        .single()
+      
+      if (teacher?.full_name) {
+        teacherName = teacher.full_name
+      }
+    }
 
-    return NextResponse.json({ quizzes: quizzes || [] })
+    // Add teacher name to each quiz for consistency
+    const quizzesWithTeacher = quizzes?.map(quiz => ({
+      ...quiz,
+      classroom: {
+        ...quiz.classroom,
+        teacher: { full_name: teacherName }
+      }
+    })) || []
+
+    console.log('Successfully fetched quizzes:', { count: quizzesWithTeacher.length, classroomId: claims.classroomId })
+
+    return NextResponse.json({ quizzes: quizzesWithTeacher })
   } catch (error) {
     console.error('Unexpected error in parent/available-quizzes:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
