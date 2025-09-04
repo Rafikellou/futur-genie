@@ -14,7 +14,7 @@ const admin = createClient(supabaseUrl, supabaseServiceKey, {
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const authHeader = req.headers.get('authorization')
@@ -33,7 +33,8 @@ export async function GET(
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
 
-    const quizId = params.id
+    const resolvedParams = await params
+    const quizId = resolvedParams.id
     console.log('Fetching quiz with ID:', quizId, 'for user:', claims.userId)
 
     // Fetch quiz data
