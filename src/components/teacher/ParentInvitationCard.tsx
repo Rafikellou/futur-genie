@@ -15,7 +15,7 @@ import {
   CheckCircle,
   AlertTriangle
 } from 'lucide-react'
-import { ensureParentInvitationLink } from '@/lib/database'
+import { createClient } from '@supabase/supabase-js'
 
 interface InvitationLink {
   id: string
@@ -46,11 +46,34 @@ export function ParentInvitationCard() {
 
     try {
       setLoading(true)
-      const invitationData = await ensureParentInvitationLink(
-        profile.classroom_id, 
-        profile.school_id
+      
+      // Get Supabase client and session
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
       )
-      setInvitation(invitationData)
+      
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) {
+        throw new Error('No active session')
+      }
+
+      // Call teacher invitation API
+      const response = await fetch('/api/teacher/invitation', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to get invitation link')
+      }
+
+      const { invitation } = await response.json()
+      setInvitation(invitation)
     } catch (error: any) {
       setError(error.message || 'Erreur lors de la création du lien d\'invitation')
     } finally {
