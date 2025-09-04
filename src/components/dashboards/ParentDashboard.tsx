@@ -19,7 +19,7 @@ interface Submission {
   score: number
   total_questions: number
   created_at: string
-  quiz: {
+  quiz?: {
     id: string
     title: string
     description: string | null
@@ -299,9 +299,9 @@ export function ParentDashboard() {
                         {submissions.slice(0, 10).map((submission) => (
                           <div key={submission.id} className="flex justify-between items-center p-3 bg-gray-50 rounded">
                             <div>
-                              <div className="font-medium">{submission.quiz.title}</div>
+                              <div className="font-medium">{submission.quiz?.title || 'Quiz sans titre'}</div>
                               <div className="text-sm text-gray-600">
-                                {new Date(submission.created_at).toLocaleDateString()} • {submission.quiz.level}
+                                {new Date(submission.created_at).toLocaleDateString()} • {submission.quiz?.level || 'N/A'}
                               </div>
                             </div>
                             <div className="text-right">
