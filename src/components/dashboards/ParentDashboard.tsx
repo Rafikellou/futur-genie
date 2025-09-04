@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Progress } from '@/components/ui/progress'
 import { Users, LogOut, User, BarChart3, Calendar, Trophy, BookOpen, TrendingUp, Clock, Star, Loader2, Plus } from 'lucide-react'
-import { getSubmissionsByParent, getParentStats } from '@/lib/database'
+import { getSubmissionsByParent, getParentStats, getAvailableQuizzesForParent } from '@/lib/database'
 
 interface Submission {
   id: string
@@ -35,6 +35,7 @@ export function ParentDashboard() {
 
   // Data state
   const [submissions, setSubmissions] = useState<Submission[]>([])
+  const [availableQuizzes, setAvailableQuizzes] = useState<any[]>([])
 
   // Real-time engagement statistics
   const [engagementStats, setEngagementStats] = useState({
@@ -61,13 +62,15 @@ export function ParentDashboard() {
     try {
       setLoading(true)
 
-      const [submissionsData, engagement] = await Promise.all([
+      const [submissionsData, engagement, quizzes] = await Promise.all([
         getSubmissionsByParent(profile.id),
-        getParentStats(profile.id)
+        getParentStats(profile.id),
+        getAvailableQuizzesForParent()
       ])
 
       setSubmissions(submissionsData as Submission[])
       setEngagementStats(engagement)
+      setAvailableQuizzes(quizzes)
 
     } catch (error: any) {
       setError(error.message || 'Erreur lors du chargement des données')
@@ -133,6 +136,46 @@ export function ParentDashboard() {
             </TabsList>
             
             <TabsContent value="overview" className="space-y-6">
+              {/* Recommended Activities Section */}
+              {availableQuizzes.length > 0 && (
+                <Card className="border-2 border-orange-200 bg-orange-50">
+                  <CardHeader>
+                    <CardTitle className="flex items-center text-orange-800">
+                      <BookOpen className="h-5 w-5 mr-2" />
+                      Activités Recommandées par {availableQuizzes[0]?.classroom?.teacher?.full_name || 'votre enseignant(e)'}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {availableQuizzes.map((quiz) => (
+                        <Card key={quiz.id} className="bg-white border border-orange-200 hover:shadow-md transition-shadow">
+                          <CardHeader className="pb-3">
+                            <CardTitle className="text-lg">{quiz.title}</CardTitle>
+                            <Badge variant="outline" className="w-fit">
+                              {quiz.level}
+                            </Badge>
+                          </CardHeader>
+                          <CardContent className="pt-0">
+                            {quiz.description && (
+                              <p className="text-sm text-gray-600 mb-3">{quiz.description}</p>
+                            )}
+                            <Button 
+                              className="w-full bg-orange-600 hover:bg-orange-700"
+                              onClick={() => {
+                                // TODO: Navigate to quiz taking page
+                                window.location.href = `/quiz/${quiz.id}`
+                              }}
+                            >
+                              Commencer le Quiz
+                            </Button>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Family Statistics Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <Card className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">

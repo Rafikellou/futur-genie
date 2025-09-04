@@ -407,6 +407,34 @@ export async function getParentStats(parentId: string) {
   }
 }
 
+export async function getAvailableQuizzesForParent(): Promise<any[]> {
+  try {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session?.access_token) {
+      throw new Error('No authentication token')
+    }
+
+    const res = await fetch('/api/parent/available-quizzes', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json'
+      }
+    })
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err?.error || 'Failed to fetch available quizzes')
+    }
+
+    const { quizzes } = await res.json()
+    return quizzes || []
+  } catch (error) {
+    console.error('Error fetching available quizzes:', error)
+    throw error
+  }
+}
+
 
 // Additional statistics functions for real-time dashboard data
 export async function getUsersBySchool(schoolId: string) {
