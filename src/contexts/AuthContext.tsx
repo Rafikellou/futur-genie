@@ -20,6 +20,7 @@ interface AuthContextType {
   loading: boolean
   isNewDirector: boolean
   claims: AuthClaims | null
+  schoolName: string | null
   signIn: (email: string, password: string) => Promise<void>
   signUp: (email: string, password: string, userData: Partial<SignUpData>) => Promise<void>
   signOut: () => Promise<void>
@@ -34,6 +35,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
   const [isNewDirector, setIsNewDirector] = useState(false)
   const [claims, setClaims] = useState<AuthClaims | null>(null)
+  const [schoolName, setSchoolName] = useState<string | null>(null)
 
   const refreshProfile = async () => {
     if (user) {
@@ -54,18 +56,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           
           // Check if this is a director without a school assigned yet
           setIsNewDirector(AuthService.isNewDirector(userProfile))
+          
+          // Fetch school name if user has a school_id
+          if (meta.schoolId) {
+            try {
+              const { getSchoolById } = await import('@/lib/database')
+              const school = await getSchoolById(meta.schoolId)
+              setSchoolName((school as any)?.name || null)
+            } catch (error) {
+              console.error('Error fetching school name:', error)
+              setSchoolName(null)
+            }
+          } else {
+            setSchoolName(null)
+          }
         } else {
           setProfile(null)
           setIsNewDirector(false)
+          setSchoolName(null)
         }
       } catch (error) {
         console.error('Error fetching user profile:', error)
         setProfile(null)
         setIsNewDirector(false)
+        setSchoolName(null)
       }
     } else {
       setProfile(null)
       setIsNewDirector(false)
+      setSchoolName(null)
     }
   }
 
@@ -153,6 +172,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loading,
     isNewDirector,
     claims,
+    schoolName,
     signIn,
     signUp,
     signOut,

@@ -99,168 +99,212 @@ export function ParentSignup({ token, onBack }: ParentSignupProps) {
 
   if (validatingToken) {
     return (
-      <Card className="w-full max-w-md mx-auto">
-        <CardContent className="flex items-center justify-center py-12">
-          <div className="text-center">
-            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-            <p>Validation de l'invitation...</p>
+      <div className="min-h-screen flex items-center justify-center p-4" style={{ background: 'var(--background)' }}>
+        <div className="card-dark p-8 text-center">
+          <div className="gradient-primary p-4 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin text-white" />
           </div>
-        </CardContent>
-      </Card>
+          <p className="text-white text-lg">Validation de l'invitation...</p>
+        </div>
+      </div>
     )
   }
 
   if (token && !invitationData) {
     return (
-      <Card className="w-full max-w-md mx-auto">
-        <CardContent className="text-center py-12">
-          <div className="text-red-600 mb-4">
-            <AlertDescription>{error}</AlertDescription>
+      <div className="min-h-screen flex items-center justify-center p-4" style={{ background: 'var(--background)' }}>
+        <div className="card-dark p-8 text-center">
+          <div className="card-secondary p-4 rounded-lg border-red-500/20 bg-red-500/10 mb-6">
+            <div className="flex items-center gap-2 text-red-400 justify-center">
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              <span className="text-sm">{error}</span>
+            </div>
           </div>
           {onBack && (
-            <Button variant="outline" onClick={onBack}>
+            <button 
+              onClick={onBack}
+              className="px-6 py-3 bg-slate-600 hover:bg-slate-500 text-white rounded-lg font-medium transition-all duration-200"
+            >
               Retour
-            </Button>
+            </button>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     )
   }
 
   return (
-    <Card className="w-full max-w-md mx-auto">
-      <CardHeader>
-        <div className="flex items-center justify-center mb-4">
-          <Users className="h-8 w-8 text-purple-600" />
-        </div>
-        <CardTitle>Inscription Parent</CardTitle>
-        <CardDescription>
-          {invitationData ? 
-            `Rejoignez ${invitationData.school.name}` : 
-            'Créez votre compte parent'
-          }
-        </CardDescription>
-        {invitationData && (
-          <div className="text-sm text-gray-600 mt-2 p-3 bg-blue-50 rounded-lg">
-            <p className="font-medium">📝 Important :</p>
-            <p>• Un compte parent = un enfant</p>
-            <p>• Pour un deuxième enfant, créez un nouveau compte avec un email différent</p>
-          </div>
-        )}
-      </CardHeader>
-      <CardContent>
-        {invitationData && (
-          <Alert className="mb-4">
-            <CheckCircle className="h-4 w-4" />
-            <AlertDescription>
-              Invitation valide pour {invitationData.school.name}
-              {invitationData.classroom && ` - Classe ${invitationData.classroom.name}`}
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {error && (
-          <Alert variant="destructive" className="mb-4">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="fullName">Votre nom complet *</Label>
-            <Input
-              id="fullName"
-              placeholder="Votre nom et prénom"
-              value={formData.fullName}
-              onChange={(e) => handleChange('fullName', e.target.value)}
-              required
-              disabled={loading}
-            />
+    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: 'var(--background)' }}>
+      <div className="w-full max-w-md">
+        <div className="card-dark p-8 rounded-xl">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <div className="gradient-secondary p-4 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+              <Users className="h-8 w-8 text-white" />
+            </div>
+            <h1 className="text-3xl font-bold text-white mb-2">Inscription Parent</h1>
+            <p className="text-slate-400">
+              {invitationData ? 
+                `Rejoignez ${invitationData.school.name}` : 
+                'Créez votre compte parent'
+              }
+            </p>
+            {invitationData && (
+              <div className="text-sm text-slate-300 mt-4 p-4 card-secondary rounded-lg">
+                <p className="font-medium text-blue-400 mb-2">📝 Important :</p>
+                <p className="text-left">• Un compte parent = un enfant</p>
+                <p className="text-left">• Pour un deuxième enfant, créez un nouveau compte avec un email différent</p>
+              </div>
+            )}
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="childFirstName">Prénom de votre enfant *</Label>
-            <Input
-              id="childFirstName"
-              placeholder="Prénom de l'enfant"
-              value={formData.childFirstName}
-              onChange={(e) => handleChange('childFirstName', e.target.value)}
-              required
-              disabled={loading}
-            />
-          </div>
+          {invitationData && (
+            <div className="card-secondary p-4 rounded-lg border-green-500/20 bg-green-500/10 mb-6">
+              <div className="flex items-center gap-2 text-green-400">
+                <CheckCircle className="h-4 w-4" />
+                <span className="text-sm">
+                  Invitation valide pour {invitationData.school.name}
+                  {invitationData.classroom && ` - Classe ${invitationData.classroom.name}`}
+                </span>
+              </div>
+            </div>
+          )}
 
-          <div className="space-y-2">
-            <Label htmlFor="email">Email *</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="votre.email@exemple.com"
-              value={formData.email}
-              onChange={(e) => handleChange('email', e.target.value)}
-              required
+          {error && (
+            <div className="card-secondary p-4 rounded-lg border-red-500/20 bg-red-500/10 mb-6">
+              <div className="flex items-center gap-2 text-red-400">
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+                <span className="text-sm">{error}</span>
+              </div>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label htmlFor="fullName" className="block text-sm font-medium text-slate-300">
+                  Votre nom complet *
+                </label>
+                <input
+                  id="fullName"
+                  placeholder="Votre nom et prénom"
+                  value={formData.fullName}
+                  onChange={(e) => handleChange('fullName', e.target.value)}
+                  required
+                  disabled={loading}
+                  className="w-full px-4 py-3 card-secondary border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label htmlFor="childFirstName" className="block text-sm font-medium text-slate-300">
+                  Prénom de votre enfant *
+                </label>
+                <input
+                  id="childFirstName"
+                  placeholder="Prénom de l'enfant"
+                  value={formData.childFirstName}
+                  onChange={(e) => handleChange('childFirstName', e.target.value)}
+                  required
+                  disabled={loading}
+                  className="w-full px-4 py-3 card-secondary border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="email" className="block text-sm font-medium text-slate-300">
+                Email *
+              </label>
+              <input
+                id="email"
+                type="email"
+                placeholder="votre.email@exemple.com"
+                value={formData.email}
+                onChange={(e) => handleChange('email', e.target.value)}
+                required
+                disabled={loading}
+                className="w-full px-4 py-3 card-secondary border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <label htmlFor="phone" className="block text-sm font-medium text-slate-300">
+                Téléphone (optionnel)
+              </label>
+              <input
+                id="phone"
+                type="tel"
+                placeholder="06 12 34 56 78"
+                value={formData.phone}
+                onChange={(e) => handleChange('phone', e.target.value)}
+                disabled={loading}
+                className="w-full px-4 py-3 card-secondary border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              />
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label htmlFor="password" className="block text-sm font-medium text-slate-300">
+                  Mot de passe *
+                </label>
+                <input
+                  id="password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={formData.password}
+                  onChange={(e) => handleChange('password', e.target.value)}
+                  required
+                  disabled={loading}
+                  className="w-full px-4 py-3 card-secondary border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <label htmlFor="confirmPassword" className="block text-sm font-medium text-slate-300">
+                  Confirmer le mot de passe *
+                </label>
+                <input
+                  id="confirmPassword"
+                  type="password"
+                  placeholder="••••••••"
+                  value={formData.confirmPassword}
+                  onChange={(e) => handleChange('confirmPassword', e.target.value)}
+                  required
+                  disabled={loading}
+                  className="w-full px-4 py-3 card-secondary border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                />
+              </div>
+            </div>
+            
+            <button 
+              type="submit" 
               disabled={loading}
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="phone">Téléphone (optionnel)</Label>
-            <Input
-              id="phone"
-              type="tel"
-              placeholder="06 12 34 56 78"
-              value={formData.phone}
-              onChange={(e) => handleChange('phone', e.target.value)}
-              disabled={loading}
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="password">Mot de passe *</Label>
-            <Input
-              id="password"
-              type="password"
-              placeholder="••••••••"
-              value={formData.password}
-              onChange={(e) => handleChange('password', e.target.value)}
-              required
-              disabled={loading}
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="confirmPassword">Confirmer le mot de passe *</Label>
-            <Input
-              id="confirmPassword"
-              type="password"
-              placeholder="••••••••"
-              value={formData.confirmPassword}
-              onChange={(e) => handleChange('confirmPassword', e.target.value)}
-              required
-              disabled={loading}
-            />
-          </div>
-          
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Créer mon compte
-          </Button>
-        </form>
-        
-        {onBack && (
-          <div className="text-center mt-4">
-            <Button
-              type="button"
-              variant="link"
-              onClick={onBack}
-              className="text-sm"
-              disabled={loading}
+              className="w-full py-3 px-4 btn-gradient gradient-secondary text-white rounded-lg font-medium transition-all duration-200 hover-lift disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              Retour
-            </Button>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+              {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+              Créer mon compte
+            </button>
+          </form>
+          
+          {onBack && (
+            <div className="text-center mt-6">
+              <button
+                type="button"
+                onClick={onBack}
+                disabled={loading}
+                className="text-slate-400 hover:text-white transition-colors duration-200 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Retour
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   )
 }

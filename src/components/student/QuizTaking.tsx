@@ -264,10 +264,12 @@ export function QuizTaking({ quizId, onComplete, onExit }: QuizTakingProps) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen">
+      <div className="flex items-center justify-center h-screen" style={{ background: 'var(--background)' }}>
         <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-          <p>Chargement du quiz...</p>
+          <div className="gradient-primary p-4 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin text-white" />
+          </div>
+          <p className="text-white text-lg">Chargement du quiz...</p>
         </div>
       </div>
     )
@@ -275,93 +277,130 @@ export function QuizTaking({ quizId, onComplete, onExit }: QuizTakingProps) {
 
   if (error) {
     return (
-      <div className="max-w-2xl mx-auto p-8">
-        <Alert variant="destructive">
-          <XCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-        <Button onClick={() => onExit?.() || window.history.back()} className="mt-4">
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Retour
-        </Button>
+      <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--background)' }}>
+        <div className="max-w-2xl mx-auto p-8">
+          <div className="card-dark p-6 border-red-500/20 bg-red-500/10">
+            <div className="flex items-center gap-3 mb-4">
+              <XCircle className="h-6 w-6 text-red-400" />
+              <h3 className="text-lg font-semibold text-white">Erreur</h3>
+            </div>
+            <p className="text-red-300 mb-6">{error}</p>
+            <button 
+              onClick={() => onExit?.() || window.history.back()}
+              className="btn-gradient gradient-primary hover-lift px-6 py-3 rounded-lg text-white font-medium flex items-center gap-2"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Retour
+            </button>
+          </div>
+        </div>
       </div>
     )
   }
 
   if (!quiz) {
     return (
-      <div className="max-w-2xl mx-auto p-8 text-center">
-        <p>Quiz non trouvé</p>
-        <Button onClick={() => onExit?.() || window.history.back()} className="mt-4">
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Retour
-        </Button>
+      <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--background)' }}>
+        <div className="max-w-2xl mx-auto p-8 text-center">
+          <div className="card-dark p-8">
+            <div className="gradient-primary p-4 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+              <BookOpen className="h-8 w-8 text-white" />
+            </div>
+            <h3 className="text-xl font-semibold text-white mb-4">Quiz non trouvé</h3>
+            <p className="text-slate-400 mb-6">Le quiz que vous recherchez n'existe pas ou n'est plus disponible.</p>
+            <button 
+              onClick={() => onExit?.() || window.history.back()}
+              className="btn-gradient gradient-primary hover-lift px-6 py-3 rounded-lg text-white font-medium flex items-center gap-2 mx-auto"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Retour
+            </button>
+          </div>
+        </div>
       </div>
     )
   }
 
   if (quizCompleted && finalScore) {
+    const percentage = Math.round((finalScore.score / finalScore.total) * 100)
+    const getScoreGradient = (score: number, total: number) => {
+      const perc = (score / total) * 100
+      if (perc >= 80) return 'gradient-primary'
+      if (perc >= 60) return 'gradient-warm'
+      return 'gradient-accent'
+    }
+    
     return (
-      <div className="max-w-2xl mx-auto p-8">
-        <Card className="text-center">
-          <CardHeader>
-            <div className="mx-auto mb-4">
-              <Trophy className="h-16 w-16 text-yellow-500" />
-            </div>
-            <CardTitle className="text-2xl">Quiz Terminé !</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div>
-              <div className={`text-4xl font-bold ${getScoreColor(finalScore.score, finalScore.total)}`}>
-                {Math.round((finalScore.score / finalScore.total) * 100)}%
+      <div className="min-h-screen flex items-center justify-center p-4" style={{ background: 'var(--background)' }}>
+        <div className="max-w-2xl mx-auto">
+          <div className="card-dark p-8 text-center">
+            <div className="mb-6">
+              <div className={`${getScoreGradient(finalScore.score, finalScore.total)} p-6 rounded-full w-24 h-24 mx-auto mb-4 flex items-center justify-center`}>
+                <Trophy className="h-12 w-12 text-white" />
               </div>
-              <div className="text-lg text-gray-600">
-                {finalScore.score} / {finalScore.total} questions correctes
-              </div>
-              <p className="text-lg font-medium mt-2">
-                {getScoreMessage(finalScore.score, finalScore.total)}
-              </p>
+              <h2 className="text-3xl font-bold text-white mb-2">Quiz Terminé !</h2>
+              <p className="text-slate-400">Félicitations pour avoir terminé le quiz</p>
             </div>
+            
+            <div className="space-y-6">
+              <div>
+                <div className={`text-5xl font-bold mb-2 ${
+                  percentage >= 80 ? 'text-green-400' : 
+                  percentage >= 60 ? 'text-yellow-400' : 'text-red-400'
+                }`}>
+                  {percentage}%
+                </div>
+                <div className="text-lg text-slate-300 mb-3">
+                  {finalScore.score} / {finalScore.total} questions correctes
+                </div>
+                <p className="text-xl font-medium text-white">
+                  {getScoreMessage(finalScore.score, finalScore.total)}
+                </p>
+              </div>
 
-            <div className="space-y-2">
-              <Progress 
-                value={(finalScore.score / finalScore.total) * 100} 
-                className="h-4"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div className="bg-gray-50 p-3 rounded">
-                <div className="font-medium">Temps écoulé</div>
-                <div className="text-gray-600">{formatTime(timeElapsed)}</div>
+              <div className="w-full bg-slate-700 rounded-full h-3">
+                <div 
+                  className={`${getScoreGradient(finalScore.score, finalScore.total)} h-3 rounded-full transition-all duration-1000`}
+                  style={{ width: `${percentage}%` }}
+                ></div>
               </div>
-              <div className="bg-gray-50 p-3 rounded">
-                <div className="font-medium">Questions répondues</div>
-                <div className="text-gray-600">{getAnsweredQuestionsCount()} / {quiz.items.length}</div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="card-secondary p-4 rounded-lg">
+                  <div className="font-semibold text-white mb-1">Temps écoulé</div>
+                  <div className="text-slate-400">{formatTime(timeElapsed)}</div>
+                </div>
+                <div className="card-secondary p-4 rounded-lg">
+                  <div className="font-semibold text-white mb-1">Questions répondues</div>
+                  <div className="text-slate-400">{getAnsweredQuestionsCount()} / {quiz.items.length}</div>
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-3">
+                <button 
+                  onClick={() => onExit?.() || (window.location.href = '/parent')}
+                  className="flex-1 py-3 px-6 bg-slate-600 hover:bg-slate-500 text-white rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Retour au tableau de bord
+                </button>
+                <button 
+                  onClick={() => {
+                    setQuizCompleted(false)
+                    setFinalScore(null)
+                    setCurrentQuestionIndex(0)
+                    setAnswers({})
+                    setTimeElapsed(0)
+                  }}
+                  className="flex-1 btn-gradient gradient-primary hover-lift py-3 px-6 rounded-lg text-white font-medium flex items-center justify-center gap-2"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                  Refaire le quiz
+                </button>
               </div>
             </div>
-
-            <div className="flex space-x-3">
-              <Button onClick={() => onExit?.() || (window.location.href = '/parent')} variant="outline" className="flex-1">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Retour au tableau de bord
-              </Button>
-              <Button 
-                onClick={() => {
-                  setQuizCompleted(false)
-                  setFinalScore(null)
-                  setCurrentQuestionIndex(0)
-                  setAnswers({})
-                  setTimeElapsed(0)
-                }}
-                className="flex-1"
-              >
-                <RotateCcw className="h-4 w-4 mr-2" />
-                Refaire le quiz
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
     )
   }
@@ -371,50 +410,61 @@ export function QuizTaking({ quizId, onComplete, onExit }: QuizTakingProps) {
   const answeredCount = getAnsweredQuestionsCount()
 
   return (
-    <div className="max-w-4xl mx-auto p-4">
-      {/* Header */}
-      <div className="mb-6">
-        <div className="flex justify-between items-center mb-4">
-          <Button variant="outline" onClick={() => onExit?.() || (window.location.href = '/parent')}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Quitter
-          </Button>
+    <div className="min-h-screen" style={{ background: 'var(--background)' }}>
+      <div className="max-w-4xl mx-auto p-4 sm:p-6">
+        {/* Header */}
+        <div className="mb-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+            <button 
+              onClick={() => onExit?.() || (window.location.href = '/parent')}
+              className="px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg font-medium transition-all duration-200 flex items-center gap-2"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span className="hidden sm:inline">Quitter</span>
+            </button>
+            
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center text-sm text-slate-300 bg-slate-700/50 px-3 py-2 rounded-lg">
+                <Timer className="h-4 w-4 mr-2" />
+                {formatTime(timeElapsed)}
+              </div>
+              <div className="flex items-center text-sm text-slate-300 bg-slate-700/50 px-3 py-2 rounded-lg">
+                <BookOpen className="h-4 w-4 mr-2" />
+                {answeredCount} / {quiz.items.length}
+              </div>
+            </div>
+          </div>
+
+          <div className="card-secondary p-6 rounded-xl">
+            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">{quiz.title}</h1>
+            {quiz.description && (
+              <p className="text-slate-400 mb-4">{quiz.description}</p>
+            )}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
+              <span className="px-3 py-1 bg-blue-500/20 text-blue-300 text-sm font-medium rounded-full w-fit">
+                {quiz.level}
+              </span>
+              <span className="text-sm text-slate-400">
+                Question {currentQuestionIndex + 1} sur {quiz.items.length}
+              </span>
+            </div>
+            <div className="w-full bg-slate-700 rounded-full h-2">
+              <div 
+                className="gradient-primary h-2 rounded-full transition-all duration-300" 
+                style={{ width: `${progress}%` }}
+              ></div>
+            </div>
+          </div>
+        </div>
+
+        {/* Question */}
+        <div className="card-dark p-6 mb-6">
+          <div className="mb-6">
+            <h2 className="text-xl sm:text-2xl font-semibold text-white mb-4">
+              Q{currentQuestionIndex + 1}: {currentQuestion.question}
+            </h2>
+          </div>
           
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center text-sm text-gray-600">
-              <Timer className="h-4 w-4 mr-1" />
-              {formatTime(timeElapsed)}
-            </div>
-            <div className="flex items-center text-sm text-gray-600">
-              <BookOpen className="h-4 w-4 mr-1" />
-              {answeredCount} / {quiz.items.length}
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <h1 className="text-2xl font-bold mb-2">{quiz.title}</h1>
-          {quiz.description && (
-            <p className="text-gray-600 mb-4">{quiz.description}</p>
-          )}
-          <div className="flex items-center space-x-2 mb-4">
-            <Badge variant="outline">{quiz.level}</Badge>
-            <span className="text-sm text-gray-600">
-              Question {currentQuestionIndex + 1} sur {quiz.items.length}
-            </span>
-          </div>
-          <Progress value={progress} className="h-2" />
-        </div>
-      </div>
-
-      {/* Question */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="text-xl">
-            Q{currentQuestionIndex + 1}: {currentQuestion.question}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
           <div className="space-y-3">
             {currentQuestion.choices.map((choice) => {
               const isSelected = answers[currentQuestion.id]?.includes(choice.id)
@@ -423,127 +473,143 @@ export function QuizTaking({ quizId, onComplete, onExit }: QuizTakingProps) {
                 <button
                   key={choice.id}
                   onClick={() => handleAnswerSelect(currentQuestion.id, choice.id)}
-                  className={`w-full p-4 text-left border rounded-lg transition-all ${
+                  className={`w-full p-4 text-left rounded-lg transition-all duration-200 hover-lift ${
                     isSelected
-                      ? 'border-blue-500 bg-blue-50 text-blue-900'
-                      : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                      ? 'card-secondary border-2 border-blue-400 bg-blue-500/10'
+                      : 'card-secondary border border-slate-600 hover:border-slate-500'
                   }`}
                 >
                   <div className="flex items-center">
-                    <div className={`w-5 h-5 rounded-full border-2 mr-3 flex items-center justify-center ${
+                    <div className={`w-6 h-6 rounded-full border-2 mr-4 flex items-center justify-center transition-all ${
                       isSelected
-                        ? 'border-blue-500 bg-blue-500'
-                        : 'border-gray-300'
+                        ? 'border-blue-400 bg-blue-500'
+                        : 'border-slate-500'
                     }`}>
                       {isSelected && (
-                        <CheckCircle className="h-3 w-3 text-white" />
+                        <CheckCircle className="h-4 w-4 text-white" />
                       )}
                     </div>
-                    <span className="font-mono text-sm mr-3 font-medium">{choice.id})</span>
-                    <span>{choice.text}</span>
+                    <span className="font-mono text-sm mr-3 font-medium text-slate-400">{choice.id})</span>
+                    <span className={`${isSelected ? 'text-white font-medium' : 'text-slate-300'}`}>{choice.text}</span>
                   </div>
                 </button>
               )
             })}
           </div>
-        </CardContent>
-      </Card>
+        </div>
 
-      {/* Navigation */}
-      <div className="flex justify-between items-center">
-        <Button
-          variant="outline"
-          onClick={goToPreviousQuestion}
-          disabled={!canGoToPrevious()}
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Précédent
-        </Button>
+        {/* Navigation */}
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+          <button
+            onClick={goToPreviousQuestion}
+            disabled={!canGoToPrevious()}
+            className={`px-6 py-3 rounded-lg font-medium transition-all duration-200 flex items-center gap-2 ${
+              canGoToPrevious() 
+                ? 'bg-slate-600 hover:bg-slate-500 text-white hover-lift' 
+                : 'bg-slate-700 text-slate-500 cursor-not-allowed'
+            }`}
+          >
+            <ArrowLeft className="h-4 w-4" />
+            <span className="hidden sm:inline">Précédent</span>
+          </button>
 
-        <div className="flex space-x-2">
-          {/* Question indicator */}
-          <div className="flex space-x-1">
+          {/* Question indicators */}
+          <div className="flex flex-wrap justify-center gap-2 max-w-md">
             {quiz.items.map((_, index) => (
               <button
                 key={index}
                 onClick={() => setCurrentQuestionIndex(index)}
-                className={`w-8 h-8 rounded text-xs font-medium ${
+                className={`w-10 h-10 rounded-lg text-sm font-medium transition-all duration-200 ${
                   index === currentQuestionIndex
-                    ? 'bg-blue-600 text-white'
+                    ? 'gradient-primary text-white shadow-lg'
                     : isQuestionAnswered(quiz.items[index].id)
-                    ? 'bg-green-100 text-green-800 border border-green-300'
-                    : 'bg-gray-100 text-gray-600 border border-gray-300'
+                    ? 'bg-green-500/20 text-green-400 border border-green-500/30 hover:bg-green-500/30'
+                    : 'bg-slate-600 text-slate-400 border border-slate-500 hover:bg-slate-500'
                 }`}
               >
                 {index + 1}
               </button>
             ))}
           </div>
+
+          {canGoToNext() ? (
+            <button
+              onClick={goToNextQuestion}
+              disabled={!isQuestionAnswered(currentQuestion.id)}
+              className={`px-6 py-3 rounded-lg font-medium transition-all duration-200 flex items-center gap-2 ${
+                isQuestionAnswered(currentQuestion.id)
+                  ? 'btn-gradient gradient-primary text-white hover-lift'
+                  : 'bg-slate-700 text-slate-500 cursor-not-allowed'
+              }`}
+            >
+              <span className="hidden sm:inline">Suivant</span>
+              <ArrowRight className="h-4 w-4" />
+            </button>
+          ) : (
+            <button
+              onClick={() => setShowConfirmSubmit(true)}
+              disabled={answeredCount === 0}
+              className={`px-6 py-3 rounded-lg font-medium transition-all duration-200 flex items-center gap-2 ${
+                answeredCount > 0
+                  ? 'btn-gradient gradient-accent text-white hover-lift'
+                  : 'bg-slate-700 text-slate-500 cursor-not-allowed'
+              }`}
+            >
+              Terminer le Quiz
+              <CheckCircle className="h-4 w-4 ml-2" />
+            </button>
+          )}
         </div>
 
-        {canGoToNext() ? (
-          <Button
-            onClick={goToNextQuestion}
-            disabled={!isQuestionAnswered(currentQuestion.id)}
-          >
-            Suivant
-            <ArrowRight className="h-4 w-4 ml-2" />
-          </Button>
-        ) : (
-          <Button
-            onClick={() => setShowConfirmSubmit(true)}
-            disabled={answeredCount === 0}
-            className="bg-green-600 hover:bg-green-700"
-          >
-            Terminer le Quiz
-            <CheckCircle className="h-4 w-4 ml-2" />
-          </Button>
-        )}
+        {/* Confirm Submit Dialog */}
+        <Dialog open={showConfirmSubmit} onOpenChange={setShowConfirmSubmit}>
+          <DialogContent className="card-dark border-slate-600">
+            <DialogHeader>
+              <DialogTitle className="text-white text-xl">Terminer le Quiz ?</DialogTitle>
+              <DialogDescription className="text-slate-400">
+                Êtes-vous sûr de vouloir terminer le quiz ? Vous avez répondu à {answeredCount} question{answeredCount > 1 ? 's' : ''} sur {quiz.items.length}.
+              </DialogDescription>
+            </DialogHeader>
+            
+            {answeredCount < quiz.items.length && (
+              <div className="card-secondary p-4 rounded-lg border-yellow-500/20 bg-yellow-500/10">
+                <div className="flex items-center gap-2 text-yellow-400">
+                  <Clock className="h-4 w-4" />
+                  <span className="text-sm">
+                    Attention : Il vous reste {quiz.items.length - answeredCount} question{quiz.items.length - answeredCount > 1 ? 's' : ''} sans réponse.
+                  </span>
+                </div>
+              </div>
+            )}
+
+            <div className="flex flex-col sm:flex-row justify-end gap-3">
+              <button 
+                onClick={() => setShowConfirmSubmit(false)}
+                className="px-6 py-3 bg-slate-600 hover:bg-slate-500 text-white rounded-lg font-medium transition-all duration-200"
+              >
+                Continuer le Quiz
+              </button>
+              <button 
+                onClick={handleSubmitQuiz}
+                disabled={isSubmitting}
+                className="px-6 py-3 btn-gradient gradient-accent text-white rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Soumission...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="h-4 w-4" />
+                    Confirmer
+                  </>
+                )}
+              </button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
-
-      {/* Confirm Submit Dialog */}
-      <Dialog open={showConfirmSubmit} onOpenChange={setShowConfirmSubmit}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Terminer le Quiz ?</DialogTitle>
-            <DialogDescription>
-              Êtes-vous sûr de vouloir terminer le quiz ? Vous avez répondu à {answeredCount} question{answeredCount > 1 ? 's' : ''} sur {quiz.items.length}.
-            </DialogDescription>
-          </DialogHeader>
-          
-          {answeredCount < quiz.items.length && (
-            <Alert>
-              <Clock className="h-4 w-4" />
-              <AlertDescription>
-                Attention : Il vous reste {quiz.items.length - answeredCount} question{quiz.items.length - answeredCount > 1 ? 's' : ''} sans réponse.
-              </AlertDescription>
-            </Alert>
-          )}
-
-          <div className="flex justify-end space-x-2">
-            <Button variant="outline" onClick={() => setShowConfirmSubmit(false)}>
-              Continuer le Quiz
-            </Button>
-            <Button 
-              onClick={handleSubmitQuiz}
-              disabled={isSubmitting}
-              className="bg-green-600 hover:bg-green-700"
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Soumission...
-                </>
-              ) : (
-                <>
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  Confirmer
-                </>
-              )}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }

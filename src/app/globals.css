@@ -1,8 +1,25 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Dark theme colors inspired by the screenshot */
+  --background: #1a1b2e;
+  --background-secondary: #16213e;
+  --background-card: #0f3460;
+  --foreground: #e2e8f0;
+  --foreground-muted: #94a3b8;
+  
+  /* Gradient colors */
+  --gradient-blue: #015FF7;
+  --gradient-purple: #6239E1;
+  --gradient-pink: #EA1E83;
+  --gradient-orange: #FF7F59;
+  --gradient-orange-light: #FB995D;
+  
+  /* UI Colors */
+  --border: #334155;
+  --border-light: #475569;
+  --accent: #0ea5e9;
+  --accent-hover: #0284c7;
 }
 
 @theme inline {
@@ -12,15 +29,96 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom gradient classes */
+.gradient-primary {
+  background: linear-gradient(135deg, var(--gradient-blue) 0%, var(--gradient-purple) 100%);
+}
+
+.gradient-secondary {
+  background: linear-gradient(135deg, var(--gradient-purple) 0%, var(--gradient-pink) 100%);
+}
+
+.gradient-accent {
+  background: linear-gradient(135deg, var(--gradient-pink) 0%, var(--gradient-orange) 100%);
+}
+
+.gradient-warm {
+  background: linear-gradient(135deg, var(--gradient-orange) 0%, var(--gradient-orange-light) 100%);
+}
+
+/* Hover effects */
+.hover-lift {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+}
+
+/* Card styles */
+.card-dark {
+  background: var(--background-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.card-secondary {
+  background: var(--background-secondary);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+/* Button animations */
+.btn-gradient {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.btn-gradient::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.btn-gradient:hover::before {
+  left: 100%;
+}
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+  body {
+    font-size: 14px;
+  }
+  
+  .mobile-padding {
+    padding: 1rem;
+  }
+  
+  .mobile-text-sm {
+    font-size: 0.875rem;
+  }
 }
