@@ -338,18 +338,32 @@ export async function createSubmission(submissionData: TablesInsert<'submissions
   return data
 }
 
-export async function getSubmissionsByParent(parentId: string) {
-  const { data, error } = await supabase
-    .from('submissions')
-    .select(`
-      *,
-      quiz:quizzes(id, title, description, level)
-    `)
-    .eq('parent_id', parentId)
-    .order('created_at', { ascending: false })
+export async function getSubmissionsByParent(parentId: string): Promise<TablesRow<'submissions'>[]> {
+  try {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session?.access_token) {
+      throw new Error('No authentication token')
+    }
 
-  if (error) throw error
-  return data
+    const res = await fetch('/api/parent/submissions', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json'
+      }
+    })
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err?.error || 'Failed to fetch submissions')
+    }
+
+    const { submissions } = await res.json()
+    return submissions || []
+  } catch (error) {
+    console.error('Error fetching submissions by parent:', error)
+    throw error
+  }
 }
 
 export async function getSubmissionsByQuiz(quizId: string) {
@@ -368,48 +382,28 @@ export async function getSubmissionsByQuiz(quizId: string) {
 
 export async function getParentStats(parentId: string) {
   try {
-    const { data: submissions, error } = await supabase
-      .from('submissions')
-      .select(`*`)
-      .eq('parent_id', parentId)
-
-    if (error) throw error
-
-    const submissionsData = submissions as Database['public']['Tables']['submissions']['Row'][] | null
-
-    const totalQuizzesTaken = submissionsData?.length || 0
-    const averageScore = totalQuizzesTaken > 0 
-      ? submissionsData!.reduce((sum, sub) => sum + (sub.score / sub.total_questions * 100), 0) / totalQuizzesTaken
-      : 0
-
-    const weekAgo = new Date()
-    weekAgo.setDate(weekAgo.getDate() - 7)
-    const thisWeekSubmissions = submissionsData?.filter(sub => 
-      new Date(sub.created_at!) > weekAgo
-    ) || []
-
-    const perfectScores = submissionsData?.filter(sub => sub.score === sub.total_questions).length || 0
-    
-    const bestScore = totalQuizzesTaken > 0 
-      ? Math.max(...submissionsData!.map(sub => (sub.score / sub.total_questions) * 100))
-      : 0
-
-    return {
-      totalQuizzesTaken,
-      averageScore: Math.round(averageScore),
-      thisWeekQuizzes: thisWeekSubmissions.length,
-      perfectScores,
-      bestScore: Math.round(bestScore)
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session?.access_token) {
+      throw new Error('No authentication token')
     }
+
+    const res = await fetch('/api/parent/stats', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json'
+      }
+    })
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err?.error || 'Failed to fetch stats')
+    }
+
+    return await res.json()
   } catch (error) {
     console.error('Error fetching parent stats:', error)
-    return {
-      totalQuizzesTaken: 0,
-      averageScore: 0,
-      thisWeekQuizzes: 0,
-      perfectScores: 0,
-      bestScore: 0
-    }
+    throw error
   }
 }
 
