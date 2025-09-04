@@ -20,7 +20,11 @@ export async function POST(req: NextRequest) {
     // Validate invitation token (not expired, and either not used OR is a PARENT invitation)
     const { data: invitation, error } = await admin
       .from('invitation_links')
-      .select('*')
+      .select(`
+        *,
+        school:schools(id, name),
+        classroom:classrooms(id, name, grade)
+      `)
       .eq('token', token)
       .gt('expires_at', new Date().toISOString())
       .single()
