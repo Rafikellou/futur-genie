@@ -56,8 +56,8 @@ interface QuizAnswer {
 
 interface QuizTakingProps {
   quizId: string
-  onComplete: (score: number, totalQuestions: number) => void
-  onExit: () => void
+  onComplete?: (score: number, totalQuestions: number) => void
+  onExit?: () => void
 }
 
 export function QuizTaking({ quizId, onComplete, onExit }: QuizTakingProps) {
@@ -205,7 +205,7 @@ export function QuizTaking({ quizId, onComplete, onExit }: QuizTakingProps) {
 
       setFinalScore({ score, total })
       setQuizCompleted(true)
-      onComplete(score, total)
+      onComplete?.(score, total)
 
     } catch (error: any) {
       handleSupabaseError(error)
@@ -248,7 +248,7 @@ export function QuizTaking({ quizId, onComplete, onExit }: QuizTakingProps) {
         </CardHeader>
         <CardContent>
           <p>Vous n'avez pas les permissions nécessaires pour passer ce quiz.</p>
-          <Button onClick={onExit} className="mt-4">
+          <Button onClick={() => onExit?.() || window.history.back()} className="mt-4">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Retour
           </Button>
@@ -275,7 +275,7 @@ export function QuizTaking({ quizId, onComplete, onExit }: QuizTakingProps) {
           <XCircle className="h-4 w-4" />
           <AlertDescription>{error}</AlertDescription>
         </Alert>
-        <Button onClick={onExit} className="mt-4">
+        <Button onClick={() => onExit?.() || window.history.back()} className="mt-4">
           <ArrowLeft className="h-4 w-4 mr-2" />
           Retour
         </Button>
@@ -287,7 +287,7 @@ export function QuizTaking({ quizId, onComplete, onExit }: QuizTakingProps) {
     return (
       <div className="max-w-2xl mx-auto p-8 text-center">
         <p>Quiz non trouvé</p>
-        <Button onClick={onExit} className="mt-4">
+        <Button onClick={() => onExit?.() || window.history.back()} className="mt-4">
           <ArrowLeft className="h-4 w-4 mr-2" />
           Retour
         </Button>
@@ -337,7 +337,7 @@ export function QuizTaking({ quizId, onComplete, onExit }: QuizTakingProps) {
             </div>
 
             <div className="flex space-x-3">
-              <Button onClick={onExit} variant="outline" className="flex-1">
+              <Button onClick={() => onExit?.() || (window.location.href = '/parent')} variant="outline" className="flex-1">
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Retour au tableau de bord
               </Button>
@@ -370,7 +370,7 @@ export function QuizTaking({ quizId, onComplete, onExit }: QuizTakingProps) {
       {/* Header */}
       <div className="mb-6">
         <div className="flex justify-between items-center mb-4">
-          <Button variant="outline" onClick={onExit}>
+          <Button variant="outline" onClick={() => onExit?.() || (window.location.href = '/parent')}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             Quitter
           </Button>
