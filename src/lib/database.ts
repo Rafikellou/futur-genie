@@ -489,20 +489,19 @@ export async function createInvitationLink(linkData: TablesInsert<'invitation_li
 }
 
 export async function getInvitationLinkByToken(token: string): Promise<TablesRow<'invitation_links'>> {
-  const { data, error } = await supabase
-    .from('invitation_links')
-    .select(`
-      *,
-      school:schools(id, name),
-      classroom:classrooms(id, name, grade)
-    `)
-    .eq('token', token)
-    .gt('expires_at', new Date().toISOString())
-    .is('used_at', null)
-    .single()
-
-  if (error) throw error
-  return data as TablesRow<'invitation_links'>
+  const res = await fetch('/api/invitations/validate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token }),
+  })
+  
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err?.error || 'Invalid invitation token')
+  }
+  
+  const { invitation } = await res.json()
+  return invitation as TablesRow<'invitation_links'>
 }
 
 export async function markInvitationLinkAsUsed(id: string): Promise<TablesRow<'invitation_links'>> {
