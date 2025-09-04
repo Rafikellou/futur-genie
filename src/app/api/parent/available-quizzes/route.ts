@@ -55,6 +55,28 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch quizzes', details: error.message }, { status: 500 })
     }
 
+    // Get parent's submissions for these quizzes to show completion status
+    const { data: submissions, error: submissionsError } = await admin
+      .from('submissions')
+      .select('quiz_id, created_at')
+      .eq('parent_id', claims.userId)
+      .order('created_at', { ascending: false })
+
+    if (submissionsError) {
+      console.error('Error fetching submissions:', submissionsError)
+      // Don't fail the whole request if submissions can't be fetched
+    }
+
+    // Create a map of quiz_id to latest submission date
+    const submissionMap = new Map<string, string>()
+    if (submissions) {
+      submissions.forEach(sub => {
+        if (!submissionMap.has(sub.quiz_id)) {
+          submissionMap.set(sub.quiz_id, sub.created_at)
+        }
+      })
+    }
+
     // Get teacher info separately for the classroom
     let teacherName = 'votre enseignant(e)'
     if (quizzes && quizzes.length > 0) {
@@ -70,13 +92,15 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // Add teacher name to each quiz for consistency
+    // Add teacher name and completion status to each quiz
     const quizzesWithTeacher = quizzes?.map(quiz => ({
       ...quiz,
       classroom: {
         ...quiz.classroom,
         teacher: { full_name: teacherName }
-      }
+      },
+      lastSubmissionDate: submissionMap.get(quiz.id) || null,
+      isCompleted: submissionMap.has(quiz.id)
     })) || []
 
     console.log('Successfully fetched quizzes:', { count: quizzesWithTeacher.length, classroomId: claims.classroomId })

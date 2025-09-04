@@ -167,25 +167,48 @@ export function ParentDashboard() {
                   <CardContent>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                       {availableQuizzes.map((quiz) => (
-                        <Card key={quiz.id} className="bg-white border border-orange-200 hover:shadow-md transition-shadow">
+                        <Card 
+                          key={quiz.id} 
+                          className={`bg-white border border-orange-200 hover:shadow-md transition-shadow ${
+                            quiz.isCompleted ? 'opacity-75 bg-gray-50' : ''
+                          }`}
+                        >
                           <CardHeader className="pb-3">
-                            <CardTitle className="text-lg">{quiz.title}</CardTitle>
+                            <div className="flex items-start justify-between">
+                              <CardTitle className={`text-lg ${quiz.isCompleted ? 'text-gray-600' : ''}`}>
+                                {quiz.title}
+                              </CardTitle>
+                              {quiz.isCompleted && (
+                                <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 ml-2" />
+                              )}
+                            </div>
                             <Badge variant="outline" className="w-fit">
                               {quiz.level}
                             </Badge>
+                            {quiz.isCompleted && quiz.lastSubmissionDate && (
+                              <div className="text-sm text-gray-500 mt-2">
+                                Effectué le {new Date(quiz.lastSubmissionDate).toLocaleDateString('fr-FR')}
+                              </div>
+                            )}
                           </CardHeader>
                           <CardContent className="pt-0">
                             {quiz.description && (
-                              <p className="text-sm text-gray-600 mb-3">{quiz.description}</p>
+                              <p className={`text-sm mb-3 ${quiz.isCompleted ? 'text-gray-500' : 'text-gray-600'}`}>
+                                {quiz.description}
+                              </p>
                             )}
                             <Button 
-                              className="w-full bg-orange-600 hover:bg-orange-700"
+                              className={`w-full ${
+                                quiz.isCompleted 
+                                  ? 'bg-gray-400 hover:bg-gray-500 text-white' 
+                                  : 'bg-orange-600 hover:bg-orange-700'
+                              }`}
                               onClick={() => {
                                 console.log('Navigating to quiz:', quiz.id)
                                 router.push(`/quiz/${quiz.id}`)
                               }}
                             >
-                              Commencer le Quiz
+                              {quiz.isCompleted ? 'Rejouer le Quiz' : 'Commencer le Quiz'}
                             </Button>
                           </CardContent>
                         </Card>
