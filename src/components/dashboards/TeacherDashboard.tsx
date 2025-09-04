@@ -18,7 +18,7 @@ import {
 import { getTeacherStudents } from '@/lib/database-teacher'
 import { AIQuizCreator } from '@/components/teacher/AIQuizCreator'
 import { ProgressTracker } from '@/components/teacher/ProgressTracker'
-import { TeacherInvitationManager } from '@/components/teacher/TeacherInvitationManager'
+import { ParentInvitationCard } from '@/components/teacher/ParentInvitationCard'
 import Link from 'next/link'
 
 interface Quiz {
@@ -356,8 +356,8 @@ export function TeacherDashboard() {
             <AIQuizCreator />
           </TabsContent>
           
-          <TabsContent value="invitations">
-            <TeacherInvitationManager />
+          <TabsContent value="invitations" className="space-y-6">
+            <ParentInvitationCard />
           </TabsContent>
           
           <TabsContent value="analytics">

@@ -602,11 +602,44 @@ export async function getInvitationLinksByClassroom(classroomId: string) {
     .from('invitation_links')
     .select(`
       *,
-      classroom:classrooms(id, name, grade),
-      creator:users!invitation_links_created_by_fkey(id, full_name)
+      classroom:classrooms(id, name, grade)
     `)
     .eq('classroom_id', classroomId)
     .order('created_at', { ascending: false })
+
+  if (error) throw error
+  return data
+}
+
+export async function ensureParentInvitationLink(classroomId: string, schoolId: string) {
+  // Check if an active parent invitation already exists for this classroom
+  const { data: existingInvitation } = await supabase
+    .from('invitation_links')
+    .select('*')
+    .eq('classroom_id', classroomId)
+    .eq('intended_role', 'PARENT')
+    .gt('expires_at', new Date().toISOString())
+    .single()
+
+  if (existingInvitation) {
+    return existingInvitation
+  }
+
+  // Create a new invitation link if none exists
+  const expiresAt = new Date()
+  expiresAt.setFullYear(expiresAt.getFullYear() + 1) // Valid for 1 year
+
+  const { data, error } = await supabase
+    .from('invitation_links')
+    .insert({
+      token: crypto.randomUUID(),
+      school_id: schoolId,
+      classroom_id: classroomId,
+      intended_role: 'PARENT' as const,
+      expires_at: expiresAt.toISOString(),
+    } as any)
+    .select()
+    .single()
 
   if (error) throw error
   return data
