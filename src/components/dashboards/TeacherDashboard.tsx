@@ -13,9 +13,9 @@ import {
   getClassroomsByTeacher, 
   getQuizzesByTeacher, 
   getSubmissionsByQuiz, 
-  getUsersBySchool,
   getTeacherEngagementStats
 } from '@/lib/database'
+import { getTeacherStudents } from '@/lib/database-teacher'
 import { AIQuizCreator } from '@/components/teacher/AIQuizCreator'
 import { ProgressTracker } from '@/components/teacher/ProgressTracker'
 import Link from 'next/link'
@@ -128,7 +128,7 @@ export function TeacherDashboard() {
       setEngagementStats(engagement)
       
       // Get students (parents) for teacher's classroom - they are returned directly from the API
-      const studentsData = await getUsersBySchool(profile.school_id || '')
+      const studentsData = await getTeacherStudents()
       
       // Transform the data to match the expected Student interface
       const transformedStudents = studentsData.map((parent: any) => ({
