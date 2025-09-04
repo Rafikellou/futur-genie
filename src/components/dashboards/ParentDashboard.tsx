@@ -119,15 +119,8 @@ export function ParentDashboard() {
           </Alert>
         )}
         
-        {submissions.length === 0 ? (
-          <Card>
-            <CardContent className="text-center py-12">
-              <User className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Aucun quiz réalisé</h3>
-              <p className="text-gray-600 mb-4">Commencez un quiz pour voir vos progrès ici.</p>
-            </CardContent>
-          </Card>
-        ) : (
+        <div>
+          {/* Always show the tabs and recommended activities */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="overview">Vue d'ensemble</TabsTrigger>
@@ -407,7 +400,7 @@ export function ParentDashboard() {
               </Card>
             </TabsContent>
           </Tabs>
-        )}
+        </div>
       </main>
     </div>
   )
