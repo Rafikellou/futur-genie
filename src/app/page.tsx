@@ -24,25 +24,17 @@ export default function Home() {
 
   if (!user || !profile) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+      <div className="min-h-screen flex items-center justify-center p-4" style={{ background: 'var(--background)' }}>
         <div className="max-w-md w-full">
-          <div className="text-center mb-8">
-            <div className="flex items-center justify-center mb-4">
-              <GraduationCap className="h-12 w-12 text-blue-600" />
-            </div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Futur Génie</h1>
-            <p className="text-gray-600">Plateforme éducative interactive</p>
-          </div>
-          
           {showDirectorSignup ? (
             <DirectorSignup onBack={() => setShowDirectorSignup(false)} />
           ) : (
             <>
               <LoginForm />
-              <div className="mt-6 text-center text-sm text-gray-600">
+              <div className="mt-6 text-center text-sm text-slate-400">
                 <p>
                   Seuls les directeurs peuvent créer un compte sans invitation. Si vous êtes directeur,
-                  <Button variant="link" className="px-1" onClick={() => setShowDirectorSignup(true)}>
+                  <Button variant="link" className="px-1 text-blue-400 hover:text-blue-300" onClick={() => setShowDirectorSignup(true)}>
                     cliquez ici
                   </Button>
                   pour créer votre école.
