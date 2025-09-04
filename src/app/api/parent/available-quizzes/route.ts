@@ -16,6 +16,11 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 
+    if (!claims.classroomId) {
+      console.error('Parent has no classroom_id:', claims)
+      return NextResponse.json({ error: 'Parent not assigned to classroom' }, { status: 400 })
+    }
+
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
     if (!url || !serviceRoleKey) {
@@ -50,8 +55,11 @@ export async function GET(req: NextRequest) {
 
     if (error) {
       console.error('Error fetching available quizzes:', error)
-      return NextResponse.json({ error: 'Failed to fetch quizzes' }, { status: 500 })
+      console.error('Query details:', { classroomId: claims.classroomId, role: claims.role })
+      return NextResponse.json({ error: 'Failed to fetch quizzes', details: error.message }, { status: 500 })
     }
+
+    console.log('Successfully fetched quizzes:', { count: quizzes?.length, classroomId: claims.classroomId })
 
     return NextResponse.json({ quizzes: quizzes || [] })
   } catch (error) {
