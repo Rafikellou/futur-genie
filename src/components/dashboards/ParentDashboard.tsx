@@ -139,7 +139,7 @@ export function ParentDashboard() {
           {/* Always show the tabs and recommended activities */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
             <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="overview">Vue d'ensemble</TabsTrigger>
+              <TabsTrigger value="overview">Activités</TabsTrigger>
               <TabsTrigger value="progress">Mes Progrès</TabsTrigger>
               <TabsTrigger value="communication">Communication</TabsTrigger>
             </TabsList>
@@ -230,163 +230,165 @@ export function ParentDashboard() {
                 </Card>
               )}
 
-              {/* Family Statistics Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <Card className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="flex items-center text-white">
-                      <Star className="h-5 w-5 mr-2" />
-                      Meilleur Score
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold">{engagementStats.bestScore}%</div>
-                    <div className="text-blue-100 text-sm">
-                      Meilleur score
-                    </div>
-                  </CardContent>
-                </Card>
-                
-                <Card className="bg-gradient-to-r from-green-500 to-green-600 text-white">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="flex items-center text-white">
-                      <BookOpen className="h-5 w-5 mr-2" />
-                      Quiz Complétés
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold">{engagementStats.totalQuizzesTaken}</div>
-                    <div className="text-green-100 text-sm">
-                      au total
-                    </div>
-                  </CardContent>
-                </Card>
-                
-                <Card className="bg-gradient-to-r from-purple-500 to-purple-600 text-white">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="flex items-center text-white">
-                      <BarChart3 className="h-5 w-5 mr-2" />
-                      Score Moyen
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className={`text-3xl font-bold ${getScoreColor(engagementStats.averageScore)}`}>
-                      {engagementStats.averageScore}%
-                    </div>
-                    <Progress value={engagementStats.averageScore} className="mt-2" />
-                  </CardContent>
-                </Card>
-                
-                <Card className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="flex items-center text-white">
-                      <Clock className="h-5 w-5 mr-2" />
-                      Cette Semaine
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold">{engagementStats.thisWeekQuizzes}</div>
-                    <div className="text-yellow-100 text-sm">
-                      quiz cette semaine
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Engagement Overview */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center">
-                      <Trophy className="h-5 w-5 mr-2" />
-                      Mes Performances
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium">Score moyen général</span>
-                      <span className="text-sm text-gray-600">{engagementStats.averageScore}%</span>
-                    </div>
-                    <Progress value={engagementStats.averageScore} className="h-2" />
-                    
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium">Activité récente</span>
-                      <span className="text-sm text-gray-600">{engagementStats.thisWeekQuizzes} quiz</span>
-                    </div>
-                    <Progress value={Math.min(engagementStats.thisWeekQuizzes * 10, 100)} className="h-2" />
-                    
-                    <div className="grid grid-cols-2 gap-4 mt-4">
-                      <div className="text-center p-3 bg-blue-50 rounded-lg">
-                        <div className="text-lg font-bold text-blue-600">{engagementStats.totalQuizzesTaken}</div>
-                        <div className="text-xs text-blue-500">Quiz Total</div>
-                      </div>
-                      <div className="text-center p-3 bg-yellow-50 rounded-lg">
-                        <div className="text-lg font-bold text-yellow-600">{engagementStats.perfectScores}</div>
-                        <div className="text-xs text-yellow-500">Scores Parfaits</div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center">
-                      <Calendar className="h-5 w-5 mr-2" />
-                      Activité Récente
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {engagementStats.totalQuizzesTaken > 0 ? (
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-gray-600">Quiz cette semaine</span>
-                          <span className="font-medium">{engagementStats.thisWeekQuizzes}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-gray-600">Score moyen</span>
-                          <span className="font-medium">{engagementStats.averageScore}%</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-gray-600">Scores parfaits</span>
-                          <span className="font-medium">{engagementStats.perfectScores}</span>
-                        </div>
-                        <div className="pt-3 border-t">
-                          <div className="text-sm text-gray-600 mb-2">Taux de réussite</div>
-                          <div className="flex items-center">
-                            <Progress 
-                              value={engagementStats.totalQuizzesTaken > 0 ? 
-                                (engagementStats.perfectScores / engagementStats.totalQuizzesTaken) * 100 : 0
-                              } 
-                              className="flex-1 h-2" 
-                            />
-                            <span className="text-sm font-medium ml-2">
-                              {engagementStats.totalQuizzesTaken > 0 ? 
-                                `${Math.round((engagementStats.perfectScores / engagementStats.totalQuizzesTaken) * 100)}%` : 
-                                '0%'
-                              }
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="text-center py-6">
-                        <Users className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                        <p className="text-gray-500">Aucune activité récente</p>
-                        <p className="text-sm text-gray-400">Commencez un quiz pour voir vos progrès.</p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
               
                           </TabsContent>
             
             <TabsContent value="progress">
               <div className="space-y-6">
                 <h2 className="text-2xl font-bold">Mes Progrès</h2>
+                
+                {/* Family Statistics Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  <Card className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="flex items-center text-white">
+                        <Star className="h-5 w-5 mr-2" />
+                        Meilleur Score
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-3xl font-bold">{engagementStats.bestScore}%</div>
+                      <div className="text-blue-100 text-sm">
+                        Meilleur score
+                      </div>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card className="bg-gradient-to-r from-green-500 to-green-600 text-white">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="flex items-center text-white">
+                        <BookOpen className="h-5 w-5 mr-2" />
+                        Quiz Complétés
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-3xl font-bold">{engagementStats.totalQuizzesTaken}</div>
+                      <div className="text-green-100 text-sm">
+                        au total
+                      </div>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card className="bg-gradient-to-r from-purple-500 to-purple-600 text-white">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="flex items-center text-white">
+                        <BarChart3 className="h-5 w-5 mr-2" />
+                        Score Moyen
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className={`text-3xl font-bold ${getScoreColor(engagementStats.averageScore)}`}>
+                        {engagementStats.averageScore}%
+                      </div>
+                      <Progress value={engagementStats.averageScore} className="mt-2" />
+                    </CardContent>
+                  </Card>
+                  
+                  <Card className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="flex items-center text-white">
+                        <Clock className="h-5 w-5 mr-2" />
+                        Cette Semaine
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-3xl font-bold">{engagementStats.thisWeekQuizzes}</div>
+                      <div className="text-yellow-100 text-sm">
+                        quiz cette semaine
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Engagement Overview */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center">
+                        <Trophy className="h-5 w-5 mr-2" />
+                        Mes Performances
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium">Score moyen général</span>
+                        <span className="text-sm text-gray-600">{engagementStats.averageScore}%</span>
+                      </div>
+                      <Progress value={engagementStats.averageScore} className="h-2" />
+                      
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium">Activité récente</span>
+                        <span className="text-sm text-gray-600">{engagementStats.thisWeekQuizzes} quiz</span>
+                      </div>
+                      <Progress value={Math.min(engagementStats.thisWeekQuizzes * 10, 100)} className="h-2" />
+                      
+                      <div className="grid grid-cols-2 gap-4 mt-4">
+                        <div className="text-center p-3 bg-blue-50 rounded-lg">
+                          <div className="text-lg font-bold text-blue-600">{engagementStats.totalQuizzesTaken}</div>
+                          <div className="text-xs text-blue-500">Quiz Total</div>
+                        </div>
+                        <div className="text-center p-3 bg-yellow-50 rounded-lg">
+                          <div className="text-lg font-bold text-yellow-600">{engagementStats.perfectScores}</div>
+                          <div className="text-xs text-yellow-500">Scores Parfaits</div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center">
+                        <Calendar className="h-5 w-5 mr-2" />
+                        Activité Récente
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {engagementStats.totalQuizzesTaken > 0 ? (
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-gray-600">Quiz cette semaine</span>
+                            <span className="font-medium">{engagementStats.thisWeekQuizzes}</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-gray-600">Score moyen</span>
+                            <span className="font-medium">{engagementStats.averageScore}%</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-gray-600">Scores parfaits</span>
+                            <span className="font-medium">{engagementStats.perfectScores}</span>
+                          </div>
+                          <div className="pt-3 border-t">
+                            <div className="text-sm text-gray-600 mb-2">Taux de réussite</div>
+                            <div className="flex items-center">
+                              <Progress 
+                                value={engagementStats.totalQuizzesTaken > 0 ? 
+                                  (engagementStats.perfectScores / engagementStats.totalQuizzesTaken) * 100 : 0
+                                } 
+                                className="flex-1 h-2" 
+                              />
+                              <span className="text-sm font-medium ml-2">
+                                {engagementStats.totalQuizzesTaken > 0 ? 
+                                  `${Math.round((engagementStats.perfectScores / engagementStats.totalQuizzesTaken) * 100)}%` : 
+                                  '0%'
+                                }
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-center py-6">
+                          <Users className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                          <p className="text-gray-500">Aucune activité récente</p>
+                          <p className="text-sm text-gray-400">Commencez un quiz pour voir vos progrès.</p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+
                 <Card>
                   <CardHeader>
-                    <CardTitle>Activité Récente</CardTitle>
+                    <CardTitle>Historique Détaillé</CardTitle>
                   </CardHeader>
                   <CardContent>
                     {submissions.length === 0 ? (
