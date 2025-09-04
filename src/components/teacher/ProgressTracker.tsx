@@ -29,7 +29,7 @@ import {
 } from 'lucide-react'
 import { 
   getQuizzesByTeacher, 
-  getSubmissionsByQuiz, 
+  getSubmissionsByQuiz,
   getClassroomsByTeacher,
   getUsersBySchool,
 } from '@/lib/database'

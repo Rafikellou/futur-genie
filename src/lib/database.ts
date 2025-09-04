@@ -352,6 +352,20 @@ export async function getSubmissionsByParent(parentId: string) {
   return data
 }
 
+export async function getSubmissionsByQuiz(quizId: string) {
+  const { data, error } = await supabase
+    .from('submissions')
+    .select(`
+      *,
+      student:users!parent_id(id, full_name)
+    `)
+    .eq('quiz_id', quizId)
+    .order('created_at', { ascending: false })
+
+  if (error) throw error
+  return data
+}
+
 export async function getParentStats(parentId: string) {
   try {
     const { data: submissions, error } = await supabase
