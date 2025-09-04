@@ -51,6 +51,39 @@ export async function getUsersBySchoolLegacy(schoolId: string) {
   return users
 }
 
+export async function getTeacherByClassroom(classroomId: string): Promise<{ full_name: string } | null> {
+  try {
+    // First get the classroom to find the teacher_id
+    const { data: classroom, error: classroomError } = await supabase
+      .from('classrooms')
+      .select('teacher_id')
+      .eq('id', classroomId)
+      .single()
+
+    if (classroomError || !(classroom as any)?.teacher_id) {
+      console.error('Error fetching classroom info:', classroomError)
+      return null
+    }
+
+    // Then get the teacher's information
+    const { data: teacher, error: teacherError } = await supabase
+      .from('users')
+      .select('full_name')
+      .eq('id', (classroom as any).teacher_id)
+      .single()
+
+    if (teacherError || !teacher) {
+      console.error('Error fetching teacher info:', teacherError)
+      return null
+    }
+
+    return { full_name: (teacher as any).full_name }
+  } catch (error) {
+    console.error('Error in getTeacherByClassroom:', error)
+    return null
+  }
+}
+
 
 // School operations
 export async function createSchool(name: string): Promise<TablesRow<'schools'>> {

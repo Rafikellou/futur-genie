@@ -92,9 +92,9 @@ export function AIQuizCreator() {
     }
   }, [profile?.id])
 
-  // Auto-select first classroom if only one available
+  // Auto-select first classroom if only one exists
   useEffect(() => {
-    if (classrooms.length === 1 && !selectedClassroom) {
+    if (classrooms.length >= 1 && !selectedClassroom) {
       setSelectedClassroom(classrooms[0].id)
     }
   }, [classrooms, selectedClassroom])
@@ -374,32 +374,7 @@ export function AIQuizCreator() {
         {/* Chat Interface */}
         <div className="relative">
           <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 to-purple-600/10 rounded-2xl sm:rounded-3xl blur-2xl"></div>
-          <div className="relative bg-gradient-to-br from-slate-800/90 to-slate-700/90 backdrop-blur-sm border border-slate-600/50 rounded-2xl sm:rounded-3xl overflow-hidden h-[500px] sm:h-[600px] lg:h-[700px] flex flex-col">
-            {/* Chat Header */}
-            <div className="bg-gradient-to-r from-slate-700/80 to-slate-600/80 backdrop-blur-sm border-b border-slate-600/50 p-4 sm:p-6">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
-                <div className="flex items-center space-x-2 sm:space-x-3">
-                  <div className="relative flex-shrink-0">
-                    <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-lg sm:rounded-xl blur-md opacity-50"></div>
-                    <div className="relative bg-gradient-to-r from-blue-600 to-cyan-600 p-2 sm:p-3 rounded-lg sm:rounded-xl">
-                      <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
-                    </div>
-                  </div>
-                  <div className="min-w-0">
-                    <h3 className="text-lg sm:text-xl font-bold text-white">Discussion avec l'IA</h3>
-                    <p className="text-slate-400 text-xs sm:text-sm">Décrivez votre leçon pour générer un quiz</p>
-                  </div>
-                </div>
-                <div className="flex items-center justify-center sm:justify-end space-x-2">
-                  {isGenerating && (
-                    <div className="flex items-center space-x-2 bg-blue-500/20 px-3 py-1 rounded-full border border-blue-500/30">
-                      <Loader2 className="h-4 w-4 animate-spin text-blue-400" />
-                      <span className="text-blue-400 text-sm">Génération...</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
+          <div className="relative bg-gradient-to-br from-slate-800/90 to-slate-700/90 backdrop-blur-sm border border-slate-600/50 rounded-2xl sm:rounded-3xl overflow-hidden h-[400px] sm:h-[500px] lg:h-[600px] flex flex-col">
             
             {/* Messages */}
             <div className="flex-1 overflow-y-auto p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6 custom-scrollbar">
@@ -458,33 +433,22 @@ export function AIQuizCreator() {
             </div>
             
             {/* Input Area */}
-            <div className="bg-gradient-to-r from-slate-700/80 to-slate-600/80 backdrop-blur-sm border-t border-slate-600/50 p-3 sm:p-4 lg:p-6 space-y-3 sm:space-y-4">
-              {classrooms.length > 1 && (
-                <div className="space-y-2 sm:space-y-3">
-                  <Label className="text-white font-medium flex items-center space-x-2 text-sm">
-                    <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
-                    <span>Classe cible</span>
-                  </Label>
-                  <Select value={selectedClassroom} onValueChange={setSelectedClassroom}>
-                    <SelectTrigger className="bg-slate-800/50 border-slate-600/50 text-white backdrop-blur-sm hover:bg-slate-700/50 transition-all text-sm">
-                      <SelectValue placeholder="Sélectionner une classe" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-slate-800 border-slate-600">
-                      {classrooms.map(classroom => (
-                        <SelectItem key={classroom.id} value={classroom.id} className="text-white hover:bg-slate-700">
-                          {classroom.name} ({classroom.grade})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+            <div className="bg-gradient-to-r from-slate-700/80 to-slate-600/80 backdrop-blur-sm border-t border-slate-600/50 p-3 space-y-3">
+              {/* Mobile scroll indicator */}
+              <div className="sm:hidden flex items-center justify-center text-slate-400 text-xs mb-2">
+                <div className="flex items-center space-x-2">
+                  <span>Faites défiler pour voir l'aperçu</span>
+                  <div className="w-4 h-4 border border-slate-400 rounded flex items-center justify-center">
+                    <span className="text-xs">↓</span>
+                  </div>
                 </div>
-              )}
+              </div>
               
               <div className="relative">
                 <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
                   <div className="flex-1 relative">
                     <Textarea
-                      placeholder={generatedQuiz ? "Demandez des modifications au quiz..." : "Décrivez votre leçon du jour..."}
+                      placeholder={generatedQuiz ? "Modifications..." : "Décrivez votre leçon..."}
                       value={userInput}
                       onChange={(e) => setUserInput(e.target.value)}
                       onKeyDown={(e) => {
@@ -493,28 +457,18 @@ export function AIQuizCreator() {
                           handleSendMessage()
                         }
                       }}
-                      className="bg-slate-800/50 border-slate-600/50 text-white placeholder-slate-400 backdrop-blur-sm resize-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all text-sm"
-                      rows={3}
+                      className="bg-slate-800/50 border-slate-600/50 text-white placeholder-slate-400 text-sm"
+                      rows={2}
                     />
-                    <div className="absolute bottom-2 right-2 text-xs text-slate-400 hidden sm:block">
-                      Entrée pour envoyer
-                    </div>
                   </div>
                   <Button 
                     onClick={handleSendMessage}
-                    disabled={!userInput.trim() || isGenerating || !selectedClassroom}
-                    className="self-end bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white border-0 shadow-lg shadow-blue-600/25 transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:hover:scale-100 px-4 sm:px-6 py-2 sm:py-3 w-full sm:w-auto"
+                    disabled={!userInput.trim() || isGenerating}
+                    className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-3 py-2 text-sm"
                   >
-                    <Send className="h-4 w-4 sm:h-5 sm:w-5" />
-                    <span className="ml-2 sm:hidden">Envoyer</span>
+                    <Send className="h-4 w-4" />
                   </Button>
                 </div>
-                {!selectedClassroom && classrooms.length > 1 && (
-                  <div className="mt-2 sm:mt-3 flex items-center space-x-2 text-amber-400 bg-amber-400/10 px-3 py-2 rounded-lg border border-amber-400/20">
-                    <div className="w-2 h-2 bg-amber-400 rounded-full animate-pulse"></div>
-                    <p className="text-xs sm:text-sm">Veuillez sélectionner une classe pour continuer</p>
-                  </div>
-                )}
               </div>
             </div>
           </div>
@@ -523,28 +477,19 @@ export function AIQuizCreator() {
         {/* Quiz Preview */}
         <div className="relative">
           <div className="absolute inset-0 bg-gradient-to-br from-purple-600/10 to-pink-600/10 rounded-2xl sm:rounded-3xl blur-2xl"></div>
-          <div className="relative bg-gradient-to-br from-slate-800/90 to-slate-700/90 backdrop-blur-sm border border-slate-600/50 rounded-2xl sm:rounded-3xl overflow-hidden h-[500px] sm:h-[600px] lg:h-[700px] flex flex-col">
+          <div className="relative bg-gradient-to-br from-slate-800/90 to-slate-700/90 backdrop-blur-sm border border-slate-600/50 rounded-2xl sm:rounded-3xl overflow-hidden h-[400px] sm:h-[500px] lg:h-[600px] flex flex-col">
             {/* Quiz Header */}
-            <div className="bg-gradient-to-r from-slate-700/80 to-slate-600/80 backdrop-blur-sm border-b border-slate-600/50 p-4 sm:p-6">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
-                <div className="flex items-center space-x-2 sm:space-x-3">
-                  <div className="relative flex-shrink-0">
-                    <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg sm:rounded-xl blur-md opacity-50"></div>
-                    <div className="relative bg-gradient-to-r from-purple-600 to-pink-600 p-2 sm:p-3 rounded-lg sm:rounded-xl">
-                      <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
-                    </div>
+            <div className="bg-gradient-to-r from-slate-700/80 to-slate-600/80 border-b border-slate-600/50 p-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <div className="bg-gradient-to-r from-purple-600 to-pink-600 p-2 rounded-lg">
+                    <Sparkles className="h-4 w-4 text-white" />
                   </div>
-                  <div className="min-w-0">
-                    <h3 className="text-lg sm:text-xl font-bold text-white">Quiz Généré</h3>
-                    <p className="text-slate-400 text-xs sm:text-sm">Prévisualisez et modifiez votre quiz</p>
-                  </div>
+                  <h3 className="text-lg font-bold text-white">Aperçu</h3>
                 </div>
                 {generatedQuiz && (
-                  <div className="flex items-center space-x-2">
-                    <div className="flex items-center space-x-2 bg-green-500/20 px-3 py-1 rounded-full border border-green-500/30">
-                      <CheckCircle className="h-4 w-4 text-green-400" />
-                      <span className="text-green-400 text-sm font-medium">{generatedQuiz.questions.length} Questions</span>
-                    </div>
+                  <div className="bg-green-500/20 px-2 py-1 rounded border border-green-500/30">
+                    <span className="text-green-400 text-sm">{generatedQuiz.questions.length} Q</span>
                   </div>
                 )}
               </div>

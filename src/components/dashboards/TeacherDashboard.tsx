@@ -335,7 +335,7 @@ export function TeacherDashboard() {
                         {activeTab === 'overview' && 'Analyse'}
                       </h2>
                       <p className="text-slate-400 text-sm">
-                        {activeTab === 'ai-quiz' && 'Génération IA'}
+                        {activeTab === 'ai-quiz' && 'Assistant Futur Génie'}
                         {activeTab === 'quizzes' && 'Gestion des quiz'}
                         {activeTab === 'results' && 'Analytics'}
                         {activeTab === 'overview' && 'Vue d\'ensemble'}
@@ -385,7 +385,7 @@ export function TeacherDashboard() {
                       <Bot className="h-5 w-5" />
                       <div className="text-left">
                         <div className="font-semibold">Créer un Quiz</div>
-                        <div className="text-sm opacity-75">Génération IA</div>
+                        <div className="text-sm opacity-75">Assistant Futur Génie</div>
                       </div>
                     </button>
                     <button
@@ -582,69 +582,6 @@ export function TeacherDashboard() {
                 </div>
               </div>
 
-              {/* Quick Actions */}
-              <div className="relative">
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 to-purple-600/10 rounded-2xl blur-2xl"></div>
-                <div className="relative bg-gradient-to-br from-slate-800/90 to-slate-700/90 backdrop-blur-sm border border-slate-600/50 rounded-2xl p-4 sm:p-6">
-                  <h3 className="text-lg sm:text-xl font-bold text-white mb-4 sm:mb-6 flex items-center">
-                    <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3 text-purple-400" />
-                    Actions Rapides
-                  </h3>
-                  
-                  <div className="space-y-3 sm:space-y-4">
-                    <button 
-                      onClick={() => setActiveTab('ai-quiz')}
-                      className="w-full group relative overflow-hidden bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 p-3 sm:p-4 rounded-xl transition-all duration-300 hover:scale-105"
-                    >
-                      <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                      <div className="relative flex items-center justify-between">
-                        <div className="flex items-center space-x-2 sm:space-x-3">
-                          <Bot className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
-                          <div className="text-left">
-                            <p className="text-white font-semibold text-sm sm:text-base">Créer un Quiz IA</p>
-                            <p className="text-blue-100 text-xs sm:text-sm">Génération automatique</p>
-                          </div>
-                        </div>
-                        <Plus className="h-4 w-4 sm:h-5 sm:w-5 text-white group-hover:rotate-90 transition-transform duration-300" />
-                      </div>
-                    </button>
-
-                    <button 
-                      onClick={() => setActiveTab('quizzes')}
-                      className="w-full group relative overflow-hidden bg-gradient-to-r from-slate-700 to-slate-600 hover:from-slate-600 hover:to-slate-500 p-3 sm:p-4 rounded-xl transition-all duration-300 hover:scale-105 border border-slate-500/50"
-                    >
-                      <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                      <div className="relative flex items-center justify-between">
-                        <div className="flex items-center space-x-2 sm:space-x-3">
-                          <FileText className="h-5 w-5 sm:h-6 sm:w-6 text-slate-300" />
-                          <div className="text-left">
-                            <p className="text-white font-semibold text-sm sm:text-base">Gérer mes Quiz</p>
-                            <p className="text-slate-400 text-xs sm:text-sm">Modifier et publier</p>
-                          </div>
-                        </div>
-                        <Edit className="h-4 w-4 sm:h-5 sm:w-5 text-slate-300 group-hover:text-white transition-colors" />
-                      </div>
-                    </button>
-
-                    <button 
-                      onClick={() => setActiveTab('results')}
-                      className="w-full group relative overflow-hidden bg-gradient-to-r from-slate-700 to-slate-600 hover:from-slate-600 hover:to-slate-500 p-3 sm:p-4 rounded-xl transition-all duration-300 hover:scale-105 border border-slate-500/50"
-                    >
-                      <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                      <div className="relative flex items-center justify-between">
-                        <div className="flex items-center space-x-2 sm:space-x-3">
-                          <BarChart3 className="h-5 w-5 sm:h-6 sm:w-6 text-slate-300" />
-                          <div className="text-left">
-                            <p className="text-white font-semibold text-sm sm:text-base">Voir les Résultats</p>
-                            <p className="text-slate-400 text-xs sm:text-sm">Analytics détaillées</p>
-                          </div>
-                        </div>
-                        <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-slate-300 group-hover:text-white transition-colors" />
-                      </div>
-                    </button>
-                  </div>
-                </div>
-              </div>
             </div>
           </TabsContent>
           
@@ -698,7 +635,7 @@ export function TeacherDashboard() {
                               </div>
                               <h3 className="text-2xl font-bold text-white mb-3">Aucun quiz créé</h3>
                               <p className="text-slate-400 text-lg leading-relaxed max-w-md mx-auto mb-8">
-                                Commencez par créer votre premier quiz avec l'assistant IA
+                                Commencez par créer votre premier quiz avec l'assistant Futur Génie
                               </p>
                               <Button 
                                 className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white border-0 shadow-lg shadow-blue-600/25 transition-all duration-300 hover:scale-105"
@@ -715,116 +652,52 @@ export function TeacherDashboard() {
                   </div>
                 ) : null
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
                   {quizzes.map((quiz) => (
-                    <div key={quiz.id} className="group relative">
-                      <div className="absolute inset-0 bg-gradient-to-r from-blue-600/5 to-purple-600/5 rounded-2xl blur-xl group-hover:blur-2xl transition-all"></div>
-                      <div className="relative bg-gradient-to-br from-slate-800/90 to-slate-700/90 backdrop-blur-sm border border-slate-600/50 rounded-2xl overflow-hidden hover:border-slate-500/60 transition-all duration-300 group-hover:shadow-2xl group-hover:shadow-blue-600/10">
-                        {/* Header */}
-                        <div className="bg-gradient-to-r from-slate-700/80 to-slate-600/80 backdrop-blur-sm border-b border-slate-600/50 p-6">
-                          <div className="flex justify-between items-start mb-4">
-                            <div className="flex-1">
-                              <h3 className="text-xl font-bold text-white mb-3 leading-tight">{quiz.title}</h3>
-                              <div className="flex items-center space-x-3">
-                                <Badge className={`${
-                                  quiz.is_published 
-                                    ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white border-0' 
-                                    : 'bg-gradient-to-r from-amber-600 to-orange-600 text-white border-0'
-                                } px-3 py-1 font-medium`}>
-                                  {quiz.is_published ? '✓ Publié' : '📝 Brouillon'}
-                                </Badge>
-                                <Badge className="bg-gradient-to-r from-blue-600 to-purple-600 text-white border-0 px-3 py-1">
-                                  {quiz.level}
-                                </Badge>
-                              </div>
-                            </div>
-                            <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-all duration-300">
-                              {!quiz.is_published && (
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm"
-                                  onClick={() => handlePublishQuiz(quiz.id, quiz.is_published)}
-                                  title="Publier le quiz"
-                                  className="hover:bg-green-600/20 text-green-400 hover:text-green-300 transition-all"
-                                >
-                                  <Send className="h-4 w-4" />
-                                </Button>
-                              )}
-                              {quiz.is_published && (
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm"
-                                  onClick={() => handlePublishQuiz(quiz.id, quiz.is_published)}
-                                  title="Dépublier le quiz"
-                                  className="hover:bg-blue-600/20 text-blue-400 hover:text-blue-300 transition-all"
-                                >
-                                  <CheckCircle className="h-4 w-4" />
-                                </Button>
-                              )}
-                              <Button 
-                                variant="ghost" 
-                                size="sm"
-                                className="hover:bg-slate-600/50 text-slate-300 hover:text-white transition-all"
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="sm"
-                                className="hover:bg-slate-600/50 text-slate-300 hover:text-white transition-all"
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="sm"
-                                className="hover:bg-red-600/20 text-red-400 hover:text-red-300 transition-all"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
+                    <div key={quiz.id} className="group relative h-32">
+                      <div className="relative bg-gradient-to-br from-slate-700/60 to-slate-600/60 backdrop-blur-sm border border-slate-600/40 rounded-xl p-3 hover:border-slate-500/60 transition-all duration-300 h-full flex flex-col">
+                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-600 to-purple-600"></div>
+                        
+                        <div className="flex-1 mb-2">
+                          <h3 className="text-xs sm:text-sm font-semibold mb-1 break-words line-clamp-2 text-white">
+                            {quiz.title}
+                          </h3>
+                          
+                          <div className="flex items-center gap-1 mb-1">
+                            <Badge className={`text-xs px-1.5 py-0.5 ${
+                              quiz.is_published 
+                                ? 'bg-green-600 text-white' 
+                                : 'bg-amber-600 text-white'
+                            }`}>
+                              {quiz.is_published ? 'Publié' : 'Brouillon'}
+                            </Badge>
+                          </div>
+                          
+                          <div className="text-xs text-slate-400">
+                            {new Date(quiz.created_at).toLocaleDateString('fr-FR')}
                           </div>
                         </div>
                         
-                        {/* Content */}
-                        <div className="p-6 space-y-4">
-                          {quiz.description && (
-                            <div className="bg-gradient-to-r from-slate-700/50 to-slate-600/50 backdrop-blur-sm border border-slate-600/30 rounded-xl p-4">
-                              <p className="text-slate-200 leading-relaxed">{quiz.description}</p>
-                            </div>
+                        <div className="flex gap-1">
+                          {!quiz.is_published && (
+                            <button 
+                              onClick={() => handlePublishQuiz(quiz.id, quiz.is_published)}
+                              className="flex-1 py-1 px-2 rounded-md text-xs bg-green-600 hover:bg-green-700 text-white transition-all"
+                            >
+                              Publier
+                            </button>
                           )}
-                          
-                          {quiz.classroom && (
-                            <div className="flex items-center space-x-3">
-                              <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl flex items-center justify-center">
-                                <span className="text-white text-sm font-bold">📚</span>
-                              </div>
-                              <div>
-                                <p className="text-white font-medium">{quiz.classroom.name}</p>
-                                <p className="text-slate-400 text-sm">{quiz.classroom.grade}</p>
-                              </div>
-                            </div>
+                          {quiz.is_published && (
+                            <button 
+                              onClick={() => handlePublishQuiz(quiz.id, quiz.is_published)}
+                              className="flex-1 py-1 px-2 rounded-md text-xs bg-blue-600 hover:bg-blue-700 text-white transition-all"
+                            >
+                              Dépublier
+                            </button>
                           )}
-                          
-                          {/* Stats */}
-                          <div className="flex items-center justify-between pt-4 border-t border-slate-600/30">
-                            <div className="flex items-center space-x-4">
-                              <div className="text-center">
-                                <p className="text-2xl font-bold text-white">10</p>
-                                <p className="text-slate-400 text-xs">Questions</p>
-                              </div>
-                              <div className="text-center">
-                                <p className="text-2xl font-bold text-blue-400">0</p>
-                                <p className="text-slate-400 text-xs">Tentatives</p>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <p className="text-slate-400 text-xs">Créé le</p>
-                              <p className="text-white text-sm font-medium">
-                                {new Date(quiz.created_at).toLocaleDateString('fr-FR')}
-                              </p>
-                            </div>
-                          </div>
+                          <button className="py-1 px-2 rounded-md text-xs bg-slate-600 hover:bg-slate-500 text-white transition-all">
+                            <Eye className="h-3 w-3" />
+                          </button>
                         </div>
                       </div>
                     </div>

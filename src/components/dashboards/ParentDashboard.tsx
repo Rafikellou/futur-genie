@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import { getSubmissionsByParent, getParentStats, getAvailableQuizzesForParent } from '@/lib/database'
+import { getSubmissionsByParent, getParentStats, getAvailableQuizzesForParent, getTeacherByClassroom } from '@/lib/database'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -44,14 +44,16 @@ interface Submission {
 }
 
 export function ParentDashboard() {
-  const { profile, schoolName, signOut } = useAuth()
+  const { profile, schoolName, signOut, claims } = useAuth()
+  const [teacherInfo, setTeacherInfo] = useState<{ full_name: string } | null>(null)
   const router = useRouter()
   const [activeTab, setActiveTab] = useState('overview')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   // Data state
-  const [submissions, setSubmissions] = useState<Submission[]>([])
+  const [submissions, setSubmissions] = useState<any[]>([])
+  const [stats, setStats] = useState<any>(null)
   const [availableQuizzes, setAvailableQuizzes] = useState<any[]>([])
 
   // Real-time engagement statistics
@@ -64,38 +66,59 @@ export function ParentDashboard() {
   })
 
   useEffect(() => {
-    if (profile?.id) {
-      fetchParentData()
+    const fetchData = async () => {
+      if (!profile?.id || !claims?.schoolId || !claims?.classroomId) return
 
-      // Set up interval for real-time updates every 30 seconds
-      const interval = setInterval(fetchParentData, 30000)
-      return () => clearInterval(interval)
+      try {
+        setLoading(true)
+        setError(null)
+
+        // Fetch all data in parallel
+        const [submissionsData, statsData, quizzesData, teacherData] = await Promise.all([
+          getSubmissionsByParent(profile.id),
+          getParentStats(profile.id),
+          getAvailableQuizzesForParent(),
+          getTeacherByClassroom(claims.classroomId)
+        ])
+
+        setSubmissions(submissionsData || [])
+        setStats(statsData)
+        setAvailableQuizzes(quizzesData || [])
+        setTeacherInfo(teacherData)
+
+        // Calculate engagement stats
+        if (submissionsData && submissionsData.length > 0) {
+          const totalQuizzes = submissionsData.length
+          const totalScore = submissionsData.reduce((sum: number, sub: any) => sum + (sub.score || 0), 0)
+          const averageScore = totalScore / totalQuizzes
+          const perfectScores = submissionsData.filter((sub: any) => sub.score === sub.total_questions).length
+          const bestScore = Math.max(...submissionsData.map((sub: any) => sub.score || 0))
+          
+          // Calculate this week's quizzes (simplified - you might want to use a proper date library)
+          const oneWeekAgo = new Date()
+          oneWeekAgo.setDate(oneWeekAgo.getDate() - 7)
+          const thisWeekQuizzes = submissionsData.filter((sub: any) => 
+            new Date(sub.created_at) > oneWeekAgo
+          ).length
+
+          setEngagementStats({
+            totalQuizzesTaken: totalQuizzes,
+            averageScore: Math.round(averageScore * 100) / 100,
+            thisWeekQuizzes,
+            perfectScores,
+            bestScore
+          })
+        }
+      } catch (err) {
+        console.error('Error fetching dashboard data:', err)
+        setError('Erreur lors du chargement des données. Veuillez réessayer.')
+      } finally {
+        setLoading(false)
+      }
     }
-  }, [profile?.id])
 
-  const fetchParentData = async () => {
-    if (!profile?.id) return
-
-    try {
-      setLoading(true)
-
-      const [submissionsData, engagement, quizzes] = await Promise.all([
-        getSubmissionsByParent(profile.id),
-        getParentStats(profile.id),
-        getAvailableQuizzesForParent()
-      ])
-
-      setSubmissions(submissionsData as Submission[])
-      setEngagementStats(engagement)
-      setAvailableQuizzes(quizzes)
-
-    } catch (error: any) {
-      setError(error.message || 'Erreur lors du chargement des données')
-    } finally {
-      setLoading(false)
-    }
-  }
-
+    fetchData()
+  }, [profile?.id, claims?.schoolId, claims?.classroomId])
 
   const getScoreColor = (score: number) => {
     if (score >= 80) return 'text-green-600'
@@ -122,33 +145,22 @@ export function ParentDashboard() {
       <header className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 via-purple-600/10 to-pink-600/10 backdrop-blur-sm"></div>
         <div className="absolute inset-0 bg-gradient-to-br from-slate-800/90 to-slate-900/90"></div>
-        <div className="relative max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
-            <div className="flex items-center w-full sm:w-auto">
-              <div className="flex items-center mr-3 sm:mr-4">
-                <div className="relative">
-                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl blur-lg opacity-50"></div>
-                  <Image 
-                    src="/logo-principal.png" 
-                    alt="Futur Génie" 
-                    width={32} 
-                    height={32}
-                    className="relative mr-2 sm:mr-3 w-8 h-8 sm:w-10 sm:h-10"
-                  />
-                </div>
-                <div className="relative">
-                  <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl blur-lg opacity-30"></div>
-                  <div className="relative bg-gradient-to-r from-purple-600 to-pink-600 p-2 sm:p-3 rounded-xl shadow-lg">
-                    <Users className="h-5 w-5 sm:h-6 sm:w-6 lg:h-8 lg:w-8 text-white" />
-                  </div>
-                </div>
+        <div className="relative max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-3 sm:py-4">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center">
+              <div className="relative mr-3">
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl blur-lg opacity-50"></div>
+                <Image 
+                  src="/logo-principal.png" 
+                  alt="Futur Génie" 
+                  width={32} 
+                  height={32}
+                  className="relative w-8 h-8 sm:w-10 sm:h-10"
+                />
               </div>
               <div className="flex-1 min-w-0">
-                <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-transparent bg-gradient-to-r from-white to-slate-200 bg-clip-text leading-tight">
-                  Bonjour {profile?.full_name?.split(' ')[0] || 'Parent'}
-                </h1>
                 <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 text-xs sm:text-sm text-slate-400">
-                  <span className="break-words">Ton espace personnel pour apprendre et t'amuser</span>
+                  <span className="break-words hidden sm:inline">Construis ton potentiel</span>
                   {schoolName && (
                     <>
                       <span className="hidden sm:inline">•</span>
@@ -158,19 +170,26 @@ export function ParentDashboard() {
                 </div>
               </div>
             </div>
-            <div className="relative w-full sm:w-auto">
-              <div className="absolute inset-0 bg-gradient-to-r from-pink-600 to-red-600 rounded-lg blur-lg opacity-30"></div>
-              <button 
-                onClick={signOut}
-                className="relative w-full sm:w-auto bg-gradient-to-r from-pink-600 to-red-600 hover:from-pink-700 hover:to-red-700 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-white font-medium text-xs sm:text-sm transition-all duration-300 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl hover:scale-105"
-              >
-                <LogOut className="h-3 w-3 sm:h-4 sm:w-4" />
-                <span>Déconnexion</span>
-              </button>
-            </div>
+            <button 
+              onClick={signOut}
+              className="text-slate-400 hover:text-white transition-colors duration-200 p-2 rounded-lg hover:bg-slate-700/30"
+              title="Déconnexion"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
           </div>
         </div>
       </header>
+
+      {/* Greeting Section */}
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 pt-4 pb-2">
+        <h1 className="text-xl sm:text-2xl font-bold text-transparent bg-gradient-to-r from-white to-slate-200 bg-clip-text">
+          Bonjour {profile?.full_name?.split(' ')[0] || 'Parent'}
+        </h1>
+        <p className="text-sm text-slate-400 mt-1">
+          École: {schoolName || 'Futur Génie'}
+        </p>
+      </div>
 
       <main className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 lg:py-8">
         {error && (
@@ -259,78 +278,62 @@ export function ParentDashboard() {
                   <div className="space-y-4 sm:space-y-6">
                     <div className="text-center mb-6 sm:mb-8">
                       <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-transparent bg-gradient-to-r from-white via-blue-100 to-purple-100 bg-clip-text mb-2">
-                        Activités recommandées
+                        Activités proposées par {teacherInfo?.full_name || 'ton enseignant(e)'}
                       </h2>
-                      <p className="text-slate-400 text-sm sm:text-base">Ces activités ont été spécialement choisies pour toi</p>
                     </div>
                     
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
-                      {availableQuizzes.map((quiz) => (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+                      {availableQuizzes
+                        .sort((a, b) => {
+                          // Sort uncompleted quizzes first
+                          if (a.isCompleted && !b.isCompleted) return 1
+                          if (!a.isCompleted && b.isCompleted) return -1
+                          return 0
+                        })
+                        .map((quiz) => (
                         <div 
                           key={quiz.id} 
-                          className={`group relative overflow-hidden transition-all duration-300 hover:scale-105 ${
+                          className={`group relative overflow-hidden transition-all duration-300 hover:scale-105 h-32 ${
                             quiz.isCompleted ? 'opacity-75' : ''
                           }`}
                         >
-                          {/* Enhanced Gradient Background */}
-                          <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 to-purple-600/10 rounded-xl sm:rounded-2xl blur-xl group-hover:blur-2xl transition-all"></div>
-                          <div className="relative bg-gradient-to-br from-slate-700/60 to-slate-600/60 backdrop-blur-sm border border-slate-600/40 rounded-xl sm:rounded-2xl p-4 sm:p-6 hover:border-slate-500/60 transition-all duration-300 group-hover:shadow-2xl group-hover:shadow-blue-600/10">
-                            {/* Top Gradient Accent */}
+                          <div className="relative bg-gradient-to-br from-slate-700/60 to-slate-600/60 backdrop-blur-sm border border-slate-600/40 rounded-xl p-3 hover:border-slate-500/60 transition-all duration-300 h-full flex flex-col">
                             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-600 to-purple-600"></div>
                             
-                            <div className="flex items-start justify-between mb-3 sm:mb-4">
-                              <div className="flex-1 min-w-0">
-                                <h3 className={`text-base sm:text-lg font-semibold mb-2 break-words ${
-                                  quiz.isCompleted ? 'text-slate-400' : 'text-white'
-                                }`}>
-                                  {quiz.title}
-                                </h3>
-                                <div className="flex items-center gap-2 mb-2 sm:mb-3 flex-wrap">
-                                  <span className="px-2 sm:px-3 py-1 bg-blue-500/20 text-blue-300 text-xs font-medium rounded-full border border-blue-500/30">
-                                    {quiz.level}
-                                  </span>
-                                  {quiz.isCompleted && (
-                                    <div className="flex items-center gap-1">
-                                      <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-green-400" />
-                                      <span className="text-xs text-green-400 font-medium">Terminé</span>
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                            
-                            {quiz.description && (
-                              <p className={`text-xs sm:text-sm mb-3 sm:mb-4 break-words ${
-                                quiz.isCompleted ? 'text-slate-500' : 'text-slate-300'
+                            <div className="flex-1 mb-2">
+                              <h3 className={`text-xs sm:text-sm font-semibold mb-1 break-words line-clamp-2 ${
+                                quiz.isCompleted ? 'text-slate-400' : 'text-white'
                               }`}>
-                                {quiz.description}
-                              </p>
-                            )}
-                            
-                            {quiz.isCompleted && quiz.lastSubmissionDate && (
-                              <div className="text-xs text-slate-500 mb-3 sm:mb-4">
-                                Effectué le {new Date(quiz.lastSubmissionDate).toLocaleDateString('fr-FR')}
-                              </div>
-                            )}
-                            
-                            <div className="relative">
-                              {!quiz.isCompleted && (
-                                <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg blur-lg opacity-30"></div>
+                                {quiz.title}
+                              </h3>
+                              
+                              {quiz.isCompleted && quiz.lastSubmissionDate && (
+                                <div className="text-xs text-slate-500 mb-1">
+                                  {new Date(quiz.lastSubmissionDate).toLocaleDateString('fr-FR')}
+                                </div>
                               )}
-                              <button 
-                                className={`relative w-full py-2.5 sm:py-3 px-3 sm:px-4 rounded-lg font-medium text-xs sm:text-sm transition-all duration-300 ${
-                                  quiz.isCompleted 
-                                    ? 'bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-500 hover:to-slate-600 text-slate-300 hover:text-white' 
-                                    : 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl hover:scale-105'
-                                }`}
-                                onClick={() => {
-                                  console.log('Navigating to quiz:', quiz.id)
-                                  router.push(`/quiz/${quiz.id}`)
-                                }}
-                              >
-                                {quiz.isCompleted ? 'Rejouer le Quiz' : 'Commencer le Quiz'}
-                              </button>
+                              
+                              {quiz.isCompleted && (
+                                <div className="flex items-center gap-1">
+                                  <CheckCircle className="h-3 w-3 text-green-400" />
+                                  <span className="text-xs text-green-400 font-medium">Terminé</span>
+                                </div>
+                              )}
                             </div>
+                            
+                            <button 
+                              className={`w-full py-1.5 px-2 rounded-md font-medium text-xs transition-all duration-300 ${
+                                quiz.isCompleted 
+                                  ? 'bg-slate-600 hover:bg-slate-500 text-slate-300 hover:text-white' 
+                                  : 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white'
+                              }`}
+                              onClick={() => {
+                                console.log('Navigating to quiz:', quiz.id)
+                                router.push(`/quiz/${quiz.id}`)
+                              }}
+                            >
+                              {quiz.isCompleted ? 'Rejouer' : 'Commencer'}
+                            </button>
                           </div>
                         </div>
                       ))}
@@ -347,7 +350,7 @@ export function ParentDashboard() {
                         </div>
                       </div>
                       <h3 className="text-lg sm:text-xl font-semibold text-white mb-2">Aucune activité disponible</h3>
-                      <p className="text-slate-400 text-sm sm:text-base">Votre enseignant(e) n'a pas encore publié de quiz pour votre classe.</p>
+                      <p className="text-slate-400 text-sm sm:text-base">{teacherInfo?.full_name || 'Ton enseignant(e)'} n'a pas encore publié de quiz pour ta classe.</p>
                     </div>
                   </div>
                 )}
