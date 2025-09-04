@@ -47,63 +47,59 @@ export function SignupRouter({ onBack }: SignupRouterProps) {
 
   // Show role selection
   return (
-    <Card className="w-full max-w-md mx-auto">
-      <CardHeader>
-        <CardTitle>Créer un compte</CardTitle>
-        <CardDescription>
+    <div className="w-full max-w-md mx-auto">
+      <div className="mb-6">
+        <h2 className="text-2xl font-semibold text-white mb-2">Créer un compte</h2>
+        <p className="text-slate-400">
           Seuls les directeurs peuvent créer un compte sans invitation. Choisissez votre rôle.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <Button
-          variant="outline"
-          className="w-full h-16 flex items-center justify-start space-x-4 text-left"
+        </p>
+      </div>
+      <div className="space-y-4">
+        <button
+          className="w-full h-16 flex items-center justify-start space-x-4 text-left p-4 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white hover:bg-white/20 transition-all duration-200 transform hover:scale-105"
           onClick={() => setSelectedRole('director')}
         >
-          <School className="h-6 w-6 text-blue-600" />
+          <School className="h-6 w-6 text-blue-400" />
           <div>
             <div className="font-medium">Directeur d'école</div>
-            <div className="text-sm text-gray-500">Créer une nouvelle école (sans invitation)</div>
+            <div className="text-sm text-slate-400">Créer une nouvelle école (sans invitation)</div>
           </div>
-        </Button>
+        </button>
 
-        <Button
-          variant="outline"
-          className="w-full h-16 flex items-center justify-start space-x-4 text-left"
+        <button
+          className="w-full h-16 flex items-center justify-start space-x-4 text-left p-4 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white hover:bg-white/20 transition-all duration-200 transform hover:scale-105"
           onClick={() => setSelectedRole('teacher')}
         >
-          <GraduationCap className="h-6 w-6 text-green-600" />
+          <GraduationCap className="h-6 w-6 text-green-400" />
           <div>
             <div className="font-medium">Enseignant</div>
-            <div className="text-sm text-gray-500">Rejoindre une école existante</div>
+            <div className="text-sm text-slate-400">Rejoindre une école existante</div>
           </div>
-        </Button>
+        </button>
 
-        <Button
-          variant="outline"
-          className="w-full h-16 flex items-center justify-start space-x-4 text-left"
+        <button
+          className="w-full h-16 flex items-center justify-start space-x-4 text-left p-4 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white hover:bg-white/20 transition-all duration-200 transform hover:scale-105"
           onClick={() => setSelectedRole('parent')}
         >
-          <Users className="h-6 w-6 text-purple-600" />
+          <Users className="h-6 w-6 text-purple-400" />
           <div>
             <div className="font-medium">Parent</div>
-            <div className="text-sm text-gray-500">Suivre la scolarité de mon enfant</div>
+            <div className="text-sm text-slate-400">Suivre la scolarité de mon enfant</div>
           </div>
-        </Button>
+        </button>
 
         {onBack && (
           <div className="text-center pt-4">
-            <Button
+            <button
               type="button"
-              variant="link"
               onClick={onBack}
-              className="text-sm"
+              className="text-slate-400 hover:text-white transition-colors duration-200 text-sm"
             >
               Retour à la connexion
-            </Button>
+            </button>
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }
