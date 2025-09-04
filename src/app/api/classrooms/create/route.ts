@@ -4,7 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => ({}))
-    const { name, grade, school_id, teacher_id } = body || {}
+    const { name, grade, school_id } = body || {}
 
     if (!name || !grade || !school_id) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -30,17 +30,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: createErr.message, code: createErr.code }, { status: 500 })
     }
 
-    // 2) Optionally assign a teacher by setting users.classroom_id
-    if (teacher_id) {
-      const { error: assignErr } = await supabase
-        .from('users')
-        .update({ classroom_id: classroom!.id })
-        .eq('id', teacher_id)
-
-      if (assignErr) {
-        return NextResponse.json({ error: assignErr.message, code: assignErr.code }, { status: 500 })
-      }
-    }
+    // Teachers are assigned via users.classroom_id updates, not during classroom creation
 
     return NextResponse.json({ ok: true, classroom_id: classroom!.id }, { status: 201 })
   } catch (e: any) {

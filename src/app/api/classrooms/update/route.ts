@@ -4,7 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => ({}))
-    const { id, name, grade, teacher_id } = body || {}
+    const { id, name, grade } = body || {}
 
     if (!id) {
       return NextResponse.json({ error: 'Missing classroom id' }, { status: 400 })
@@ -31,30 +31,7 @@ export async function POST(req: Request) {
       }
     }
 
-    // 2) Reassign teacher if provided: set users.classroom_id
-    if (teacher_id !== undefined) {
-      // First, clear any current teacher assigned to this classroom
-      const { error: clearErr } = await supabase
-        .from('users')
-        .update({ classroom_id: null })
-        .eq('classroom_id', id)
-        .eq('role', 'TEACHER')
-
-      if (clearErr) {
-        return NextResponse.json({ error: clearErr.message, code: clearErr.code }, { status: 500 })
-      }
-
-      if (teacher_id) {
-        const { error: assignErr } = await supabase
-          .from('users')
-          .update({ classroom_id: id })
-          .eq('id', teacher_id)
-
-        if (assignErr) {
-          return NextResponse.json({ error: assignErr.message, code: assignErr.code }, { status: 500 })
-        }
-      }
-    }
+    // Teacher assignments are handled separately via user management
 
     return NextResponse.json({ ok: true }, { status: 200 })
   } catch (e: any) {

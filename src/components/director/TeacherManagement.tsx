@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label'
 import { Users, BookOpen, UserPlus, Mail, Edit, Trash2, Plus, Loader2 } from 'lucide-react'
 import { getUsersBySchool, getClassroomsBySchool, updateClassroom } from '@/lib/database'
+import { updateUserClassroom, removeUserFromClassroom } from '@/lib/user-management'
 
 interface Teacher {
   id: string
@@ -89,9 +90,8 @@ export function TeacherManagement() {
 
     setSaving(true)
     try {
-      await updateClassroom(assignmentData.classroomId, {
-        teacher_id: assignmentData.teacherId
-      })
+      // Update teacher's classroom_id directly in users table
+      await updateUserClassroom(assignmentData.teacherId, assignmentData.classroomId)
       
       // Refresh data
       await fetchData()
@@ -110,9 +110,7 @@ export function TeacherManagement() {
   const handleRemoveFromClassroom = async (teacherId: string, classroomId: string) => {
     setSaving(true)
     try {
-      await updateClassroom(classroomId, {
-        teacher_id: null
-      })
+      await removeUserFromClassroom(teacherId)
       
       // Refresh data
       await fetchData()

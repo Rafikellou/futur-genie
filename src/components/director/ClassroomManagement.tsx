@@ -58,8 +58,7 @@ export function ClassroomManagement() {
   // Form state
   const [formData, setFormData] = useState({
     name: '',
-    grade: '',
-    teacherId: ''
+    grade: ''
   })
 
   useEffect(() => {
@@ -95,12 +94,11 @@ export function ClassroomManagement() {
       await createClassroom({
         name: formData.name,
         grade: formData.grade as any,
-        school_id: profile.school_id,
-        teacher_id: formData.teacherId || null
+        school_id: profile.school_id
       })
       
       // Reset form and close dialog
-      setFormData({ name: '', grade: '', teacherId: '' })
+      setFormData({ name: '', grade: '' })
       setShowCreateDialog(false)
       
       // Refresh data
@@ -116,8 +114,7 @@ export function ClassroomManagement() {
     setSelectedClassroom(classroom)
     setFormData({
       name: classroom.name,
-      grade: classroom.grade,
-      teacherId: classroom.teacher_id || ''
+      grade: classroom.grade
     })
     setShowEditDialog(true)
     setError(null)
@@ -133,12 +130,11 @@ export function ClassroomManagement() {
     try {
       await updateClassroom(selectedClassroom.id, {
         name: formData.name,
-        grade: formData.grade,
-        teacher_id: formData.teacherId || null
+        grade: formData.grade
       })
       
       // Reset form and close dialog
-      setFormData({ name: '', grade: '', teacherId: '' })
+      setFormData({ name: '', grade: '' })
       setSelectedClassroom(null)
       setShowEditDialog(false)
       
@@ -250,26 +246,7 @@ export function ClassroomManagement() {
                 </Select>
               </div>
               
-              <div className="space-y-2">
-                <Label htmlFor="teacher">Enseignant (optionnel)</Label>
-                <Select 
-                  value={formData.teacherId || 'none'}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, teacherId: value === 'none' ? '' : value }))}
-                  disabled={creating}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Sélectionner un enseignant" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Aucun enseignant assigné</SelectItem>
-                    {teachers.map(teacher => (
-                      <SelectItem key={teacher.id} value={teacher.id}>
-                        {teacher.full_name} ({teacher.email})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              {/* Teacher assignment handled separately via TeacherManagement */}
               
               <div className="flex justify-end space-x-2">
                 <Button 
@@ -340,26 +317,7 @@ export function ClassroomManagement() {
               </Select>
             </div>
             
-            <div className="space-y-2">
-              <Label htmlFor="editTeacher">Enseignant (optionnel)</Label>
-              <Select 
-                value={formData.teacherId || 'none'} 
-                onValueChange={(value) => setFormData(prev => ({ ...prev, teacherId: value === 'none' ? '' : value }))}
-                disabled={editing}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Sélectionner un enseignant" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Aucun enseignant assigné</SelectItem>
-                  {teachers.map(teacher => (
-                    <SelectItem key={teacher.id} value={teacher.id}>
-                      {teacher.full_name} ({teacher.email})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Teacher assignment handled separately via TeacherManagement */}
             
             <div className="flex justify-end space-x-2">
               <Button 
@@ -367,7 +325,7 @@ export function ClassroomManagement() {
                 variant="outline" 
                 onClick={() => {
                   setShowEditDialog(false)
-                  setFormData({ name: '', grade: '', teacherId: '' })
+                  setFormData({ name: '', grade: '' })
                   setSelectedClassroom(null)
                 }}
                 disabled={editing}
