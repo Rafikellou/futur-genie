@@ -305,8 +305,8 @@ export function ProgressTracker() {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-          <p>Analyse des données en cours...</p>
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-white" />
+          <p className="text-slate-400">Analyse des données en cours...</p>
         </div>
       </div>
     )
@@ -315,14 +315,17 @@ export function ProgressTracker() {
   const overallStats = getOverallStats()
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-6 sm:space-y-8">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold">Analyse des Progrès</h2>
-          <p className="text-gray-600">Suivez les performances de vos élèves et identifiez les points d'amélioration</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-white">Analyse des Progrès</h2>
+          <p className="text-slate-400 text-sm sm:text-base">Suivez les performances de vos élèves et identifiez les points d'amélioration</p>
         </div>
         
-        <Button onClick={exportData} variant="outline">
+        <Button 
+          onClick={exportData} 
+          className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white border-0 shadow-lg shadow-blue-600/25 transition-all duration-300 hover:scale-105 w-full sm:w-auto"
+        >
           <Download className="h-4 w-4 mr-2" />
           Exporter
         </Button>
@@ -336,19 +339,19 @@ export function ProgressTracker() {
       )}
       
       {/* Filters */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Filter className="h-5 w-5 mr-2" />
-            Filtres
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="relative">
+        <div className="absolute inset-0 bg-gradient-to-r from-slate-600/10 to-slate-500/10 rounded-2xl blur-2xl"></div>
+        <div className="relative bg-gradient-to-br from-slate-800/90 to-slate-700/90 backdrop-blur-sm border border-slate-600/50 rounded-2xl p-4 sm:p-6">
+          <h3 className="text-base sm:text-lg font-bold text-white mb-4 sm:mb-6 flex items-center">
+            <Filter className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3 text-blue-400" />
+            Filtres d'Analyse
+          </h3>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
             <div>
-              <label className="text-sm font-medium mb-2 block">Quiz</label>
+              <label className="text-xs sm:text-sm font-medium mb-2 sm:mb-3 block text-slate-300">Quiz</label>
               <Select value={selectedQuiz} onValueChange={setSelectedQuiz}>
-                <SelectTrigger>
+                <SelectTrigger className="bg-slate-700/50 border-slate-600/50 text-white text-sm">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -363,9 +366,9 @@ export function ProgressTracker() {
             </div>
             
             <div>
-              <label className="text-sm font-medium mb-2 block">Classe</label>
+              <label className="text-xs sm:text-sm font-medium mb-2 sm:mb-3 block text-slate-300">Classe</label>
               <Select value={selectedClassroom} onValueChange={setSelectedClassroom}>
-                <SelectTrigger>
+                <SelectTrigger className="bg-slate-700/50 border-slate-600/50 text-white text-sm">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -380,9 +383,9 @@ export function ProgressTracker() {
             </div>
             
             <div>
-              <label className="text-sm font-medium mb-2 block">Période</label>
+              <label className="text-xs sm:text-sm font-medium mb-2 sm:mb-3 block text-slate-300">Période</label>
               <Select value={dateRange} onValueChange={setDateRange}>
-                <SelectTrigger>
+                <SelectTrigger className="bg-slate-700/50 border-slate-600/50 text-white text-sm">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -395,83 +398,154 @@ export function ProgressTracker() {
             </div>
             
             <div className="flex items-end">
-              <Button onClick={() => {
-                setSelectedQuiz('all')
-                setSelectedClassroom('all')
-                setDateRange('all')
-              }} variant="outline" className="w-full">
+              <Button 
+                onClick={() => {
+                  setSelectedQuiz('all')
+                  setSelectedClassroom('all')
+                  setDateRange('all')
+                }} 
+                className="w-full bg-gradient-to-r from-slate-600 to-slate-500 hover:from-slate-500 hover:to-slate-400 text-white border-0 transition-all duration-300 hover:scale-105 text-sm"
+              >
                 Réinitialiser
               </Button>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
       
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="overview">Vue d'ensemble</TabsTrigger>
-          <TabsTrigger value="quizzes">Par Quiz</TabsTrigger>
-          <TabsTrigger value="students">Par Élève</TabsTrigger>
-        </TabsList>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6 sm:space-y-8">
+        <div className="relative">
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-purple-600/20 rounded-2xl blur-2xl"></div>
+          <div className="relative bg-gradient-to-r from-slate-800/90 to-slate-700/90 backdrop-blur-sm border border-slate-600/50 rounded-2xl p-1">
+            <div className="grid grid-cols-3 gap-1">
+              <button 
+                className={`px-3 sm:px-6 py-2 sm:py-3 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-300 flex items-center justify-center space-x-1 sm:space-x-2 ${
+                  activeTab === 'overview' 
+                    ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg shadow-blue-600/25 scale-105' 
+                    : 'text-slate-300 hover:text-white hover:bg-slate-600/50 hover:scale-102'
+                }`} 
+                onClick={() => setActiveTab('overview')}
+              >
+                <BarChart3 className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Vue d'ensemble</span>
+                <span className="sm:hidden">Vue</span>
+              </button>
+              <button 
+                className={`px-3 sm:px-6 py-2 sm:py-3 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-300 flex items-center justify-center space-x-1 sm:space-x-2 ${
+                  activeTab === 'quizzes' 
+                    ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg shadow-blue-600/25 scale-105' 
+                    : 'text-slate-300 hover:text-white hover:bg-slate-600/50 hover:scale-102'
+                }`} 
+                onClick={() => setActiveTab('quizzes')}
+              >
+                <BookOpen className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Par Quiz</span>
+                <span className="sm:hidden">Quiz</span>
+              </button>
+              <button 
+                className={`px-3 sm:px-6 py-2 sm:py-3 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-300 flex items-center justify-center space-x-1 sm:space-x-2 ${
+                  activeTab === 'students' 
+                    ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg shadow-blue-600/25 scale-105' 
+                    : 'text-slate-300 hover:text-white hover:bg-slate-600/50 hover:scale-102'
+                }`} 
+                onClick={() => setActiveTab('students')}
+              >
+                <Users className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Par Élève</span>
+                <span className="sm:hidden">Élèves</span>
+              </button>
+            </div>
+          </div>
+        </div>
         
-        <TabsContent value="overview" className="space-y-6">
+        <TabsContent value="overview" className="space-y-6 sm:space-y-8">
           {/* Overall Statistics */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <BookOpen className="h-5 w-5 mr-2" />
-                  Quiz Actifs
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{overallStats.totalQuizzes}</div>
-                <div className="text-sm text-gray-600">quiz publiés</div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Users className="h-5 w-5 mr-2" />
-                  Soumissions
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{overallStats.totalSubmissions}</div>
-                <div className="text-sm text-gray-600">total des tentatives</div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Star className="h-5 w-5 mr-2" />
-                  Score Moyen
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className={`text-2xl font-bold ${getScoreColor(overallStats.averageScore)}`}>
-                  {overallStats.averageScore}%
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+            <div className="group relative">
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-2xl blur-lg opacity-25 group-hover:opacity-40 transition-opacity duration-300"></div>
+              <div className="relative bg-gradient-to-br from-slate-800 to-slate-700 border border-slate-600/50 p-4 sm:p-6 rounded-2xl hover:scale-105 transition-all duration-300">
+                <div className="flex items-center justify-between mb-3 sm:mb-4">
+                  <div className="bg-gradient-to-r from-blue-500 to-cyan-500 p-2 sm:p-3 rounded-lg sm:rounded-xl">
+                    <BookOpen className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+                  </div>
+                  <div className="text-right">
+                    <div className="text-2xl sm:text-3xl font-bold text-white">{overallStats.totalQuizzes}</div>
+                    <div className="text-xs text-slate-400 uppercase tracking-wide">Actifs</div>
+                  </div>
                 </div>
-                <Progress value={overallStats.averageScore} className="mt-2" />
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Target className="h-5 w-5 mr-2" />
-                  Taux de Participation
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className={`text-2xl font-bold ${getScoreColor(overallStats.averageCompletion)}`}>
-                  {overallStats.averageCompletion}%
+                <div className="space-y-1 sm:space-y-2">
+                  <h3 className="text-white font-semibold text-sm sm:text-base">Quiz Publiés</h3>
+                  <p className="text-slate-400 text-xs sm:text-sm">Disponibles aux élèves</p>
                 </div>
-                <Progress value={overallStats.averageCompletion} className="mt-2" />
-              </CardContent>
-            </Card>
+              </div>
+            </div>
+
+            <div className="group relative">
+              <div className="absolute inset-0 bg-gradient-to-r from-green-500 to-emerald-500 rounded-2xl blur-lg opacity-25 group-hover:opacity-40 transition-opacity duration-300"></div>
+              <div className="relative bg-gradient-to-br from-slate-800 to-slate-700 border border-slate-600/50 p-4 sm:p-6 rounded-2xl hover:scale-105 transition-all duration-300">
+                <div className="flex items-center justify-between mb-3 sm:mb-4">
+                  <div className="bg-gradient-to-r from-green-500 to-emerald-500 p-2 sm:p-3 rounded-lg sm:rounded-xl">
+                    <Users className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+                  </div>
+                  <div className="text-right">
+                    <div className="text-2xl sm:text-3xl font-bold text-white">{overallStats.totalSubmissions}</div>
+                    <div className="text-xs text-slate-400 uppercase tracking-wide">Total</div>
+                  </div>
+                </div>
+                <div className="space-y-1 sm:space-y-2">
+                  <h3 className="text-white font-semibold text-sm sm:text-base">Soumissions</h3>
+                  <p className="text-slate-400 text-xs sm:text-sm">Tentatives d'élèves</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="group relative">
+              <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl blur-lg opacity-25 group-hover:opacity-40 transition-opacity duration-300"></div>
+              <div className="relative bg-gradient-to-br from-slate-800 to-slate-700 border border-slate-600/50 p-4 sm:p-6 rounded-2xl hover:scale-105 transition-all duration-300">
+                <div className="flex items-center justify-between mb-3 sm:mb-4">
+                  <div className="bg-gradient-to-r from-purple-500 to-pink-500 p-2 sm:p-3 rounded-lg sm:rounded-xl">
+                    <Star className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+                  </div>
+                  <div className="text-right">
+                    <div className="text-2xl sm:text-3xl font-bold text-white">{overallStats.averageScore}%</div>
+                    <div className="text-xs text-slate-400 uppercase tracking-wide">Moyenne</div>
+                  </div>
+                </div>
+                <div className="space-y-1 sm:space-y-2">
+                  <h3 className="text-white font-semibold text-sm sm:text-base">Score Moyen</h3>
+                  <div className="w-full bg-slate-600 rounded-full h-1.5 sm:h-2">
+                    <div 
+                      className="bg-gradient-to-r from-purple-500 to-pink-500 h-1.5 sm:h-2 rounded-full transition-all duration-500" 
+                      style={{ width: `${overallStats.averageScore}%` }}
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="group relative">
+              <div className="absolute inset-0 bg-gradient-to-r from-orange-500 to-red-500 rounded-2xl blur-lg opacity-25 group-hover:opacity-40 transition-opacity duration-300"></div>
+              <div className="relative bg-gradient-to-br from-slate-800 to-slate-700 border border-slate-600/50 p-4 sm:p-6 rounded-2xl hover:scale-105 transition-all duration-300">
+                <div className="flex items-center justify-between mb-3 sm:mb-4">
+                  <div className="bg-gradient-to-r from-orange-500 to-red-500 p-2 sm:p-3 rounded-lg sm:rounded-xl">
+                    <Target className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+                  </div>
+                  <div className="text-right">
+                    <div className="text-2xl sm:text-3xl font-bold text-white">{overallStats.averageCompletion}%</div>
+                    <div className="text-xs text-slate-400 uppercase tracking-wide">Taux</div>
+                  </div>
+                </div>
+                <div className="space-y-1 sm:space-y-2">
+                  <h3 className="text-white font-semibold text-sm sm:text-base">Participation</h3>
+                  <div className="w-full bg-slate-600 rounded-full h-1.5 sm:h-2">
+                    <div 
+                      className="bg-gradient-to-r from-orange-500 to-red-500 h-1.5 sm:h-2 rounded-full transition-all duration-500" 
+                      style={{ width: `${overallStats.averageCompletion}%` }}
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
           
           {/* Recent Activity */}

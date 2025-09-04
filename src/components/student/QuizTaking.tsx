@@ -24,6 +24,7 @@ import {
 import { getQuizWithItems, createSubmission } from '@/lib/database'
 import { handleSupabaseError } from '@/lib/error-handler'
 import { checkPermission } from '@/lib/permissions'
+import confetti from 'canvas-confetti'
 
 interface QuizQuestion {
   id: string
@@ -73,6 +74,9 @@ export function QuizTaking({ quizId, onComplete, onExit }: QuizTakingProps) {
   // Quiz state
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
   const [answers, setAnswers] = useState<Record<string, string[]>>({})
+  const [questionResults, setQuestionResults] = useState<Record<string, boolean>>({})
+  const [showFeedback, setShowFeedback] = useState(false)
+  const [currentFeedback, setCurrentFeedback] = useState<{ isCorrect: boolean; message: string } | null>(null)
   const [timeElapsed, setTimeElapsed] = useState(0)
   const [quizStartTime] = useState(new Date())
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -119,10 +123,54 @@ export function QuizTaking({ quizId, onComplete, onExit }: QuizTakingProps) {
   }
 
   const handleAnswerSelect = (questionId: string, choiceId: string) => {
+    if (!quiz) return
+    
+    // Set the answer
     setAnswers(prev => ({
       ...prev,
-      [questionId]: [choiceId] // Single choice for now
+      [questionId]: [choiceId]
     }))
+
+    // Check if answer is correct
+    const currentQuestion = quiz.items.find(q => q.id === questionId)
+    if (currentQuestion) {
+      const isCorrect = currentQuestion.answer_keys.includes(choiceId)
+      
+      // Store the result
+      setQuestionResults(prev => ({
+        ...prev,
+        [questionId]: isCorrect
+      }))
+
+      // Show immediate feedback
+      setCurrentFeedback({
+        isCorrect,
+        message: isCorrect ? 'Bonne réponse ! 🎉' : 'Pas tout à fait... 😔'
+      })
+      setShowFeedback(true)
+
+      // Show confetti for correct answers
+      if (isCorrect) {
+        // Trigger confetti animation
+        confetti({
+          particleCount: 100,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: ['#10B981', '#3B82F6', '#8B5CF6', '#F59E0B', '#EF4444']
+        })
+      }
+
+      // Auto-advance to next question after 1.5 seconds
+      setTimeout(() => {
+        setShowFeedback(false)
+        if (currentQuestionIndex < quiz.items.length - 1) {
+          setCurrentQuestionIndex(prev => prev + 1)
+        } else {
+          // Last question - show completion dialog
+          setShowConfirmSubmit(true)
+        }
+      }, 1500)
+    }
   }
 
   const isQuestionAnswered = (questionId: string) => {
@@ -133,6 +181,10 @@ export function QuizTaking({ quizId, onComplete, onExit }: QuizTakingProps) {
     return Object.keys(answers).filter(questionId => 
       answers[questionId] && answers[questionId].length > 0
     ).length
+  }
+
+  const getCorrectAnswersCount = () => {
+    return Object.values(questionResults).filter(result => result === true).length
   }
 
   const canGoToNext = () => {
@@ -264,12 +316,13 @@ export function QuizTaking({ quizId, onComplete, onExit }: QuizTakingProps) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen" style={{ background: 'var(--background)' }}>
-        <div className="text-center">
-          <div className="gradient-primary p-4 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-white" />
+      <div className="flex items-center justify-center h-screen p-4" style={{ background: 'var(--background)' }}>
+        <div className="text-center max-w-sm mx-auto">
+          <div className="gradient-primary p-4 sm:p-5 rounded-full w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4 sm:mb-6 flex items-center justify-center shadow-2xl">
+            <Loader2 className="h-8 w-8 sm:h-10 sm:w-10 animate-spin text-white" />
           </div>
-          <p className="text-white text-lg">Chargement du quiz...</p>
+          <p className="text-white text-base sm:text-lg font-medium">Chargement du quiz...</p>
+          <p className="text-slate-400 text-sm mt-2">Veuillez patienter</p>
         </div>
       </div>
     )
@@ -277,21 +330,26 @@ export function QuizTaking({ quizId, onComplete, onExit }: QuizTakingProps) {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--background)' }}>
-        <div className="max-w-2xl mx-auto p-8">
-          <div className="card-dark p-6 border-red-500/20 bg-red-500/10">
-            <div className="flex items-center gap-3 mb-4">
-              <XCircle className="h-6 w-6 text-red-400" />
-              <h3 className="text-lg font-semibold text-white">Erreur</h3>
+      <div className="min-h-screen flex items-center justify-center p-4" style={{ background: 'var(--background)' }}>
+        <div className="max-w-md mx-auto w-full">
+          <div className="card-dark p-6 sm:p-8 border-red-500/20 bg-red-500/10 backdrop-blur-sm relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-red-900/20 via-transparent to-red-800/10 pointer-events-none"></div>
+            <div className="relative">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-red-500/20 rounded-full">
+                  <XCircle className="h-5 w-5 sm:h-6 sm:w-6 text-red-400" />
+                </div>
+                <h3 className="text-lg sm:text-xl font-semibold text-white">Erreur</h3>
+              </div>
+              <p className="text-red-300 mb-6 text-sm sm:text-base break-words leading-relaxed">{error}</p>
+              <button 
+                onClick={() => onExit?.() || window.history.back()}
+                className="w-full btn-gradient gradient-primary hover-lift px-6 py-3 rounded-xl text-white font-medium flex items-center justify-center gap-2 border border-blue-400/30 shadow-lg shadow-blue-500/20 text-sm"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Retour
+              </button>
             </div>
-            <p className="text-red-300 mb-6">{error}</p>
-            <button 
-              onClick={() => onExit?.() || window.history.back()}
-              className="btn-gradient gradient-primary hover-lift px-6 py-3 rounded-lg text-white font-medium flex items-center gap-2"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Retour
-            </button>
           </div>
         </div>
       </div>
@@ -300,21 +358,24 @@ export function QuizTaking({ quizId, onComplete, onExit }: QuizTakingProps) {
 
   if (!quiz) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--background)' }}>
-        <div className="max-w-2xl mx-auto p-8 text-center">
-          <div className="card-dark p-8">
-            <div className="gradient-primary p-4 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-              <BookOpen className="h-8 w-8 text-white" />
+      <div className="min-h-screen flex items-center justify-center p-4" style={{ background: 'var(--background)' }}>
+        <div className="max-w-md mx-auto w-full text-center">
+          <div className="card-dark p-6 sm:p-8 relative overflow-hidden border border-slate-600/30">
+            <div className="absolute inset-0 bg-gradient-to-br from-slate-800/40 via-transparent to-slate-900/30 pointer-events-none"></div>
+            <div className="relative">
+              <div className="gradient-primary p-4 sm:p-5 rounded-full w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4 sm:mb-6 flex items-center justify-center shadow-2xl">
+                <BookOpen className="h-8 w-8 sm:h-10 sm:w-10 text-white" />
+              </div>
+              <h3 className="text-lg sm:text-xl font-semibold text-white mb-4">Quiz non trouvé</h3>
+              <p className="text-slate-400 mb-6 text-sm sm:text-base break-words leading-relaxed">Le quiz que vous recherchez n'existe pas ou n'est plus disponible.</p>
+              <button 
+                onClick={() => onExit?.() || window.history.back()}
+                className="w-full btn-gradient gradient-primary hover-lift px-6 py-3 rounded-xl text-white font-medium flex items-center justify-center gap-2 border border-blue-400/30 shadow-lg shadow-blue-500/20 text-sm"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Retour
+              </button>
             </div>
-            <h3 className="text-xl font-semibold text-white mb-4">Quiz non trouvé</h3>
-            <p className="text-slate-400 mb-6">Le quiz que vous recherchez n'existe pas ou n'est plus disponible.</p>
-            <button 
-              onClick={() => onExit?.() || window.history.back()}
-              className="btn-gradient gradient-primary hover-lift px-6 py-3 rounded-lg text-white font-medium flex items-center gap-2 mx-auto"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Retour
-            </button>
           </div>
         </div>
       </div>
@@ -331,72 +392,75 @@ export function QuizTaking({ quizId, onComplete, onExit }: QuizTakingProps) {
     }
     
     return (
-      <div className="min-h-screen flex items-center justify-center p-4" style={{ background: 'var(--background)' }}>
-        <div className="max-w-2xl mx-auto">
-          <div className="card-dark p-8 text-center">
-            <div className="mb-6">
-              <div className={`${getScoreGradient(finalScore.score, finalScore.total)} p-6 rounded-full w-24 h-24 mx-auto mb-4 flex items-center justify-center`}>
-                <Trophy className="h-12 w-12 text-white" />
-              </div>
-              <h2 className="text-3xl font-bold text-white mb-2">Quiz Terminé !</h2>
-              <p className="text-slate-400">Félicitations pour avoir terminé le quiz</p>
-            </div>
-            
-            <div className="space-y-6">
-              <div>
-                <div className={`text-5xl font-bold mb-2 ${
-                  percentage >= 80 ? 'text-green-400' : 
-                  percentage >= 60 ? 'text-yellow-400' : 'text-red-400'
-                }`}>
-                  {percentage}%
+      <div className="min-h-screen flex items-center justify-center p-3 sm:p-4" style={{ background: 'var(--background)' }}>
+        <div className="max-w-lg mx-auto w-full">
+          <div className="card-dark p-6 sm:p-8 text-center relative overflow-hidden border border-slate-600/30">
+            <div className="absolute inset-0 bg-gradient-to-br from-slate-800/40 via-transparent to-slate-900/30 pointer-events-none"></div>
+            <div className="relative">
+              <div className="mb-6">
+                <div className={`${getScoreGradient(finalScore.score, finalScore.total)} p-5 sm:p-6 rounded-full w-20 h-20 sm:w-24 sm:h-24 mx-auto mb-4 flex items-center justify-center shadow-2xl`}>
+                  <Trophy className="h-10 w-10 sm:h-12 sm:w-12 text-white" />
                 </div>
-                <div className="text-lg text-slate-300 mb-3">
-                  {finalScore.score} / {finalScore.total} questions correctes
-                </div>
-                <p className="text-xl font-medium text-white">
-                  {getScoreMessage(finalScore.score, finalScore.total)}
-                </p>
+                <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">Quiz Terminé !</h2>
+                <p className="text-slate-400 text-sm sm:text-base">Félicitations pour avoir terminé le quiz</p>
               </div>
+              
+              <div className="space-y-4 sm:space-y-6">
+                <div>
+                  <div className={`text-4xl sm:text-5xl font-bold mb-2 ${
+                    percentage >= 80 ? 'text-green-400' : 
+                    percentage >= 60 ? 'text-yellow-400' : 'text-red-400'
+                  }`}>
+                    {percentage}%
+                  </div>
+                  <div className="text-base sm:text-lg text-slate-300 mb-3">
+                    {finalScore.score} / {finalScore.total} questions correctes
+                  </div>
+                  <p className="text-lg sm:text-xl font-medium text-white break-words">
+                    {getScoreMessage(finalScore.score, finalScore.total)}
+                  </p>
+                </div>
 
-              <div className="w-full bg-slate-700 rounded-full h-3">
-                <div 
-                  className={`${getScoreGradient(finalScore.score, finalScore.total)} h-3 rounded-full transition-all duration-1000`}
-                  style={{ width: `${percentage}%` }}
-                ></div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="card-secondary p-4 rounded-lg">
-                  <div className="font-semibold text-white mb-1">Temps écoulé</div>
-                  <div className="text-slate-400">{formatTime(timeElapsed)}</div>
+                <div className="w-full bg-slate-700/60 rounded-full h-3 sm:h-4 overflow-hidden">
+                  <div 
+                    className={`${getScoreGradient(finalScore.score, finalScore.total)} h-full rounded-full transition-all duration-1000 ease-out`}
+                    style={{ width: `${percentage}%` }}
+                  ></div>
                 </div>
-                <div className="card-secondary p-4 rounded-lg">
-                  <div className="font-semibold text-white mb-1">Questions répondues</div>
-                  <div className="text-slate-400">{getAnsweredQuestionsCount()} / {quiz.items.length}</div>
-                </div>
-              </div>
 
-              <div className="flex flex-col sm:flex-row gap-3">
-                <button 
-                  onClick={() => onExit?.() || (window.location.href = '/parent')}
-                  className="flex-1 py-3 px-6 bg-slate-600 hover:bg-slate-500 text-white rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2"
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                  Retour au tableau de bord
-                </button>
-                <button 
-                  onClick={() => {
-                    setQuizCompleted(false)
-                    setFinalScore(null)
-                    setCurrentQuestionIndex(0)
-                    setAnswers({})
-                    setTimeElapsed(0)
-                  }}
-                  className="flex-1 btn-gradient gradient-primary hover-lift py-3 px-6 rounded-lg text-white font-medium flex items-center justify-center gap-2"
-                >
-                  <RotateCcw className="h-4 w-4" />
-                  Refaire le quiz
-                </button>
+                <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                  <div className="card-secondary p-3 sm:p-4 rounded-xl border border-slate-600/30">
+                    <div className="font-semibold text-white mb-1 text-sm sm:text-base">Temps écoulé</div>
+                    <div className="text-slate-400 font-mono text-sm sm:text-base">{formatTime(timeElapsed)}</div>
+                  </div>
+                  <div className="card-secondary p-3 sm:p-4 rounded-xl border border-slate-600/30">
+                    <div className="font-semibold text-white mb-1 text-sm sm:text-base">Questions répondues</div>
+                    <div className="text-slate-400 font-mono text-sm sm:text-base">{getAnsweredQuestionsCount()} / {quiz.items.length}</div>
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                  <button 
+                    onClick={() => onExit?.() || (window.location.href = '/parent')}
+                    className="flex-1 py-2.5 sm:py-3 px-4 sm:px-6 bg-slate-600/80 backdrop-blur-sm hover:bg-slate-500 text-white rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2 border border-slate-500/30 hover:border-slate-400/50 text-sm"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                    Retour au tableau de bord
+                  </button>
+                  <button 
+                    onClick={() => {
+                      setQuizCompleted(false)
+                      setFinalScore(null)
+                      setCurrentQuestionIndex(0)
+                      setAnswers({})
+                      setTimeElapsed(0)
+                    }}
+                    className="flex-1 btn-gradient gradient-primary hover-lift py-2.5 sm:py-3 px-4 sm:px-6 rounded-xl text-white font-medium flex items-center justify-center gap-2 border border-blue-400/30 shadow-lg shadow-blue-500/20 text-sm"
+                  >
+                    <RotateCcw className="h-4 w-4" />
+                    Refaire le quiz
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -408,89 +472,121 @@ export function QuizTaking({ quizId, onComplete, onExit }: QuizTakingProps) {
   const currentQuestion = quiz.items[currentQuestionIndex]
   const progress = ((currentQuestionIndex + 1) / quiz.items.length) * 100
   const answeredCount = getAnsweredQuestionsCount()
+  const correctCount = getCorrectAnswersCount()
 
   return (
-    <div className="min-h-screen" style={{ background: 'var(--background)' }}>
-      <div className="max-w-4xl mx-auto p-4 sm:p-6">
-        {/* Header */}
-        <div className="mb-6">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-            <button 
-              onClick={() => onExit?.() || (window.location.href = '/parent')}
-              className="px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg font-medium transition-all duration-200 flex items-center gap-2"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              <span className="hidden sm:inline">Quitter</span>
-            </button>
-            
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center text-sm text-slate-300 bg-slate-700/50 px-3 py-2 rounded-lg">
-                <Timer className="h-4 w-4 mr-2" />
-                {formatTime(timeElapsed)}
-              </div>
-              <div className="flex items-center text-sm text-slate-300 bg-slate-700/50 px-3 py-2 rounded-lg">
-                <BookOpen className="h-4 w-4 mr-2" />
-                {answeredCount} / {quiz.items.length}
-              </div>
-            </div>
+    <div className="min-h-screen relative" style={{ background: 'var(--background)' }}>
+      <div className="max-w-2xl mx-auto p-4">
+        {/* Simplified Header */}
+        <div className="flex items-center justify-between mb-4">
+          <button 
+            onClick={() => onExit?.() || (window.location.href = '/parent')}
+            className="p-2 bg-slate-700/50 hover:bg-slate-600 text-white rounded-lg transition-all duration-200 flex items-center gap-2"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+          
+          <div className="text-xs text-slate-400 font-medium">
+            {quiz.title}
           </div>
+          
+          <div className="text-xs text-slate-300 bg-slate-700/50 px-2 py-1 rounded-lg">
+            {formatTime(timeElapsed)}
+          </div>
+        </div>
 
-          <div className="card-secondary p-6 rounded-xl">
-            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">{quiz.title}</h1>
-            {quiz.description && (
-              <p className="text-slate-400 mb-4">{quiz.description}</p>
-            )}
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
-              <span className="px-3 py-1 bg-blue-500/20 text-blue-300 text-sm font-medium rounded-full w-fit">
-                {quiz.level}
-              </span>
-              <span className="text-sm text-slate-400">
-                Question {currentQuestionIndex + 1} sur {quiz.items.length}
-              </span>
-            </div>
-            <div className="w-full bg-slate-700 rounded-full h-2">
-              <div 
-                className="gradient-primary h-2 rounded-full transition-all duration-300" 
-                style={{ width: `${progress}%` }}
-              ></div>
-            </div>
+        {/* Progress Bar with Score */}
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm text-slate-400">
+              Question {currentQuestionIndex + 1}/{quiz.items.length}
+            </span>
+            <span className="text-sm font-medium text-green-400">
+              {correctCount} bonnes réponses
+            </span>
+          </div>
+          <div className="w-full bg-slate-700/60 rounded-full h-3 overflow-hidden">
+            <div 
+              className="gradient-primary h-full rounded-full transition-all duration-500 ease-out" 
+              style={{ width: `${progress}%` }}
+            />
           </div>
         </div>
 
         {/* Question */}
-        <div className="card-dark p-6 mb-6">
-          <div className="mb-6">
-            <h2 className="text-xl sm:text-2xl font-semibold text-white mb-4">
-              Q{currentQuestionIndex + 1}: {currentQuestion.question}
-            </h2>
-          </div>
+        <div className="mb-6">
+          <h2 className="text-xl sm:text-2xl font-bold text-white mb-6 break-words leading-relaxed text-center">
+            {currentQuestion.question}
+          </h2>
           
           <div className="space-y-3">
             {currentQuestion.choices.map((choice) => {
               const isSelected = answers[currentQuestion.id]?.includes(choice.id)
+              const isAnswered = isQuestionAnswered(currentQuestion.id)
+              const isCorrect = currentQuestion.answer_keys.includes(choice.id)
+              
+              let buttonClass = 'card-secondary border border-slate-600/50 hover:border-slate-500/70'
+              
+              if (isAnswered && showFeedback) {
+                if (isSelected) {
+                  buttonClass = isCorrect 
+                    ? 'bg-green-500/20 border-2 border-green-400 shadow-lg shadow-green-500/20'
+                    : 'bg-red-500/20 border-2 border-red-400 shadow-lg shadow-red-500/20'
+                } else if (isCorrect) {
+                  buttonClass = 'bg-green-500/10 border border-green-400/50'
+                }
+              } else if (isSelected) {
+                buttonClass = 'card-secondary border-2 border-blue-400/80 bg-blue-500/10'
+              }
               
               return (
                 <button
                   key={choice.id}
-                  onClick={() => handleAnswerSelect(currentQuestion.id, choice.id)}
-                  className={`w-full p-4 text-left rounded-lg transition-all duration-200 hover-lift ${
-                    isSelected
-                      ? 'card-secondary border-2 border-blue-400 bg-blue-500/10'
-                      : 'card-secondary border border-slate-600 hover:border-slate-500'
+                  onClick={() => !isAnswered ? handleAnswerSelect(currentQuestion.id, choice.id) : undefined}
+                  disabled={isAnswered}
+                  className={`w-full p-4 text-left rounded-xl transition-all duration-300 ${buttonClass} ${
+                    !isAnswered ? 'hover-lift cursor-pointer' : 'cursor-default'
                   }`}
                 >
-                  <div className="flex items-center">
-                    <div className={`w-6 h-6 rounded-full border-2 mr-4 flex items-center justify-center transition-all ${
-                      isSelected
-                        ? 'border-blue-400 bg-blue-500'
-                        : 'border-slate-500'
+                  <div className="flex items-center gap-4">
+                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all flex-shrink-0 ${
+                      isAnswered && showFeedback
+                        ? isSelected
+                          ? isCorrect
+                            ? 'border-green-400 bg-green-500'
+                            : 'border-red-400 bg-red-500'
+                          : isCorrect
+                            ? 'border-green-400 bg-green-500'
+                            : 'border-slate-500'
+                        : isSelected
+                          ? 'border-blue-400 bg-blue-500'
+                          : 'border-slate-500'
                     }`}>
-                      {isSelected && (
+                      {(isAnswered && showFeedback && (isSelected || isCorrect)) && (
+                        isCorrect ? (
+                          <CheckCircle className="h-4 w-4 text-white" />
+                        ) : isSelected ? (
+                          <XCircle className="h-4 w-4 text-white" />
+                        ) : null
+                      )}
+                      {!isAnswered && isSelected && (
                         <CheckCircle className="h-4 w-4 text-white" />
                       )}
                     </div>
-                    <span className="font-mono text-sm mr-3 font-medium text-slate-400">{choice.id})</span>
-                    <span className={`${isSelected ? 'text-white font-medium' : 'text-slate-300'}`}>{choice.text}</span>
+                    <span className="font-mono text-sm font-medium text-slate-400 flex-shrink-0">{choice.id})</span>
+                    <span className={`text-base break-words leading-relaxed ${
+                      isAnswered && showFeedback
+                        ? isCorrect
+                          ? 'text-green-300 font-medium'
+                          : isSelected
+                            ? 'text-red-300'
+                            : 'text-slate-300'
+                        : isSelected
+                          ? 'text-white font-medium'
+                          : 'text-slate-300'
+                    }`}>
+                      {choice.text}
+                    </span>
                   </div>
                 </button>
               )
@@ -498,101 +594,84 @@ export function QuizTaking({ quizId, onComplete, onExit }: QuizTakingProps) {
           </div>
         </div>
 
+        {/* Feedback Message */}
+        {showFeedback && currentFeedback && (
+          <div className={`text-center p-4 rounded-xl mb-4 transition-all duration-300 ${
+            currentFeedback.isCorrect
+              ? 'bg-green-500/20 border border-green-400/30 text-green-300'
+              : 'bg-red-500/20 border border-red-400/30 text-red-300'
+          }`}>
+            <div className="text-lg font-medium">
+              {currentFeedback.message}
+            </div>
+          </div>
+        )}
+
         {/* Navigation */}
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+        <div className="flex justify-between items-center">
           <button
             onClick={goToPreviousQuestion}
             disabled={!canGoToPrevious()}
-            className={`px-6 py-3 rounded-lg font-medium transition-all duration-200 flex items-center gap-2 ${
+            className={`p-3 rounded-xl font-medium transition-all duration-200 flex items-center gap-2 ${
               canGoToPrevious() 
-                ? 'bg-slate-600 hover:bg-slate-500 text-white hover-lift' 
-                : 'bg-slate-700 text-slate-500 cursor-not-allowed'
+                ? 'bg-slate-600/80 hover:bg-slate-500 text-white hover-lift' 
+                : 'bg-slate-700/50 text-slate-500 cursor-not-allowed'
             }`}
           >
-            <ArrowLeft className="h-4 w-4" />
-            <span className="hidden sm:inline">Précédent</span>
+            <ArrowLeft className="h-5 w-5" />
           </button>
 
           {/* Question indicators */}
-          <div className="flex flex-wrap justify-center gap-2 max-w-md">
-            {quiz.items.map((_, index) => (
-              <button
-                key={index}
-                onClick={() => setCurrentQuestionIndex(index)}
-                className={`w-10 h-10 rounded-lg text-sm font-medium transition-all duration-200 ${
-                  index === currentQuestionIndex
-                    ? 'gradient-primary text-white shadow-lg'
-                    : isQuestionAnswered(quiz.items[index].id)
-                    ? 'bg-green-500/20 text-green-400 border border-green-500/30 hover:bg-green-500/30'
-                    : 'bg-slate-600 text-slate-400 border border-slate-500 hover:bg-slate-500'
-                }`}
-              >
-                {index + 1}
-              </button>
-            ))}
+          <div className="flex gap-2">
+            {quiz.items.map((_, index) => {
+              const questionId = quiz.items[index].id
+              const isAnswered = isQuestionAnswered(questionId)
+              const isCorrect = questionResults[questionId]
+              
+              return (
+                <button
+                  key={index}
+                  onClick={() => setCurrentQuestionIndex(index)}
+                  className={`w-8 h-8 rounded-lg text-xs font-medium transition-all duration-200 ${
+                    index === currentQuestionIndex
+                      ? 'gradient-primary text-white shadow-lg'
+                      : isAnswered
+                        ? isCorrect
+                          ? 'bg-green-500/30 text-green-300 border border-green-400/50'
+                          : 'bg-red-500/30 text-red-300 border border-red-400/50'
+                        : 'bg-slate-600/80 text-slate-400 border border-slate-500/30'
+                  }`}
+                >
+                  {index + 1}
+                </button>
+              )
+            })}
           </div>
 
-          {canGoToNext() ? (
-            <button
-              onClick={goToNextQuestion}
-              disabled={!isQuestionAnswered(currentQuestion.id)}
-              className={`px-6 py-3 rounded-lg font-medium transition-all duration-200 flex items-center gap-2 ${
-                isQuestionAnswered(currentQuestion.id)
-                  ? 'btn-gradient gradient-primary text-white hover-lift'
-                  : 'bg-slate-700 text-slate-500 cursor-not-allowed'
-              }`}
-            >
-              <span className="hidden sm:inline">Suivant</span>
-              <ArrowRight className="h-4 w-4" />
-            </button>
-          ) : (
-            <button
-              onClick={() => setShowConfirmSubmit(true)}
-              disabled={answeredCount === 0}
-              className={`px-6 py-3 rounded-lg font-medium transition-all duration-200 flex items-center gap-2 ${
-                answeredCount > 0
-                  ? 'btn-gradient gradient-accent text-white hover-lift'
-                  : 'bg-slate-700 text-slate-500 cursor-not-allowed'
-              }`}
-            >
-              Terminer le Quiz
-              <CheckCircle className="h-4 w-4 ml-2" />
-            </button>
-          )}
+          <div className="w-12" /> {/* Spacer for centering */}
         </div>
 
         {/* Confirm Submit Dialog */}
         <Dialog open={showConfirmSubmit} onOpenChange={setShowConfirmSubmit}>
-          <DialogContent className="card-dark border-slate-600">
+          <DialogContent className="card-dark border-slate-600/50 backdrop-blur-sm max-w-sm mx-auto">
             <DialogHeader>
-              <DialogTitle className="text-white text-xl">Terminer le Quiz ?</DialogTitle>
-              <DialogDescription className="text-slate-400">
-                Êtes-vous sûr de vouloir terminer le quiz ? Vous avez répondu à {answeredCount} question{answeredCount > 1 ? 's' : ''} sur {quiz.items.length}.
+              <DialogTitle className="text-white text-lg font-bold text-center">Terminer le Quiz ?</DialogTitle>
+              <DialogDescription className="text-slate-400 text-sm text-center">
+                Vous avez <span className="font-semibold text-green-400">{correctCount}</span> bonnes réponses sur <span className="font-semibold text-white">{quiz.items.length}</span> questions.
               </DialogDescription>
             </DialogHeader>
-            
-            {answeredCount < quiz.items.length && (
-              <div className="card-secondary p-4 rounded-lg border-yellow-500/20 bg-yellow-500/10">
-                <div className="flex items-center gap-2 text-yellow-400">
-                  <Clock className="h-4 w-4" />
-                  <span className="text-sm">
-                    Attention : Il vous reste {quiz.items.length - answeredCount} question{quiz.items.length - answeredCount > 1 ? 's' : ''} sans réponse.
-                  </span>
-                </div>
-              </div>
-            )}
 
-            <div className="flex flex-col sm:flex-row justify-end gap-3">
+            <div className="flex flex-col gap-3">
               <button 
                 onClick={() => setShowConfirmSubmit(false)}
-                className="px-6 py-3 bg-slate-600 hover:bg-slate-500 text-white rounded-lg font-medium transition-all duration-200"
+                className="w-full py-3 bg-slate-600/80 hover:bg-slate-500 text-white rounded-xl font-medium transition-all duration-200 text-sm"
               >
-                Continuer le Quiz
+                Continuer
               </button>
               <button 
                 onClick={handleSubmitQuiz}
                 disabled={isSubmitting}
-                className="px-6 py-3 btn-gradient gradient-accent text-white rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full py-3 btn-gradient gradient-accent text-white rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50 text-sm"
               >
                 {isSubmitting ? (
                   <>
@@ -602,7 +681,7 @@ export function QuizTaking({ quizId, onComplete, onExit }: QuizTakingProps) {
                 ) : (
                   <>
                     <CheckCircle className="h-4 w-4" />
-                    Confirmer
+                    Terminer le Quiz
                   </>
                 )}
               </button>

@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Progress } from '@/components/ui/progress'
-import { BookOpen, LogOut, Plus, Users, BarChart3, FileText, Eye, Edit, Trash2, Loader2, Bot, Clock, TrendingUp, Target, Calendar, Send, CheckCircle } from 'lucide-react'
+import { BookOpen, LogOut, Plus, Users, BarChart3, FileText, Eye, Edit, Trash2, Loader2, Bot, Clock, TrendingUp, Target, Calendar, Send, CheckCircle, Menu, X } from 'lucide-react'
 import { 
   getClassroomsByTeacher, 
   getQuizzesByTeacher, 
@@ -83,9 +83,10 @@ interface Submission {
 
 export function TeacherDashboard() {
   const { profile, schoolName, signOut } = useAuth()
-  const [activeTab, setActiveTab] = useState('ai-quiz')
+  const [activeTab, setActiveTab] = useState('overview')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   
   // Data state
   const [classrooms, setClassrooms] = useState<Classroom[]>([])
@@ -192,38 +193,57 @@ export function TeacherDashboard() {
   const { totalClassrooms, totalStudents, averageStudentsPerClass } = getClassroomStats()
 
   return (
-    <div className="min-h-screen" style={{ background: 'var(--background)' }}>
-      <header className="card-secondary border-b-0 rounded-none">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center">
-            <div className="flex items-center mr-4">
-              <Image 
-                src="/logo-principal.png" 
-                alt="Futur Génie" 
-                width={40} 
-                height={40} 
-                className="mr-3"
-              />
-              <div className="gradient-accent p-2 rounded-lg">
-                <BookOpen className="h-6 w-6 text-white" />
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+      <header className="relative">
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 to-purple-600/10 blur-3xl"></div>
+        <div className="relative bg-gradient-to-r from-slate-800/95 to-slate-700/95 backdrop-blur-sm border-b border-slate-600/50 px-4 sm:px-6 py-4 sm:py-6">
+          <div className="flex justify-between items-center max-w-7xl mx-auto">
+            <div className="flex items-center space-x-3 sm:space-x-6 flex-1 min-w-0">
+              <div className="flex items-center space-x-2 sm:space-x-4 flex-shrink-0">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl sm:rounded-2xl blur-md sm:blur-lg opacity-50"></div>
+                  <div className="relative bg-gradient-to-r from-slate-700 to-slate-600 p-2 sm:p-3 rounded-xl sm:rounded-2xl border border-slate-500/50">
+                    <Image 
+                      src="/logo-principal.png" 
+                      alt="Futur Génie" 
+                      width={24} 
+                      height={24} 
+                      className="sm:w-8 sm:h-8"
+                    />
+                  </div>
+                </div>
+                <div className="relative hidden sm:block">
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl blur-md opacity-50"></div>
+                  <div className="relative bg-gradient-to-r from-blue-600 to-purple-600 p-3 rounded-xl">
+                    <BookOpen className="h-6 w-6 text-white" />
+                  </div>
+                </div>
+              </div>
+              <div className="min-w-0 flex-1">
+                <h1 className="text-lg sm:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent truncate">
+                  Tableau de Bord
+                </h1>
+                <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm mt-1">
+                  <span className="text-slate-300 font-medium truncate">{profile?.full_name}</span>
+                  {schoolName && (
+                    <>
+                      <div className="w-1 h-1 bg-slate-400 rounded-full flex-shrink-0"></div>
+                      <span className="text-blue-400 font-medium bg-blue-400/10 px-2 py-1 rounded-full border border-blue-400/20 text-xs truncate">
+                        {schoolName}
+                      </span>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
-            <div>
-              <h1 className="text-2xl font-bold text-white">Tableau de Bord Enseignant</h1>
-              <div className="flex items-center gap-2 text-sm text-slate-400">
-                <span>{profile?.full_name}</span>
-                {schoolName && (
-                  <>
-                    <span>•</span>
-                    <span className="text-blue-400 font-medium">{schoolName}</span>
-                  </>
-                )}
-              </div>
-            </div>
+            <Button 
+              onClick={signOut}
+              className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white border-0 shadow-lg shadow-red-600/25 transition-all duration-300 hover:scale-105 px-3 sm:px-6 py-2 sm:py-3 flex-shrink-0"
+            >
+              <LogOut className="h-4 w-4 sm:mr-2" /> 
+              <span className="hidden sm:inline">Déconnexion</span>
+            </Button>
           </div>
-          <button className="btn-gradient gradient-accent hover-lift px-4 py-2 rounded-lg text-white font-medium text-sm transition-all duration-200 flex items-center gap-2" onClick={signOut}>
-            <LogOut className="h-4 w-4" /> Déconnexion
-          </button>
         </div>
       </header>
 
@@ -240,182 +260,392 @@ export function TeacherDashboard() {
           </Alert>
         )}
         
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <div className="card-secondary p-1 rounded-xl">
-            <div className="grid grid-cols-4 gap-1">
-              <button className={`px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 ${activeTab === 'ai-quiz' ? 'gradient-accent text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-slate-700/50'}`} onClick={() => setActiveTab('ai-quiz')}>Créer un Quiz</button>
-              <button className={`px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 ${activeTab === 'quizzes' ? 'gradient-accent text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-slate-700/50'}`} onClick={() => setActiveTab('quizzes')}>Mes Quiz</button>
-              <button className={`px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 ${activeTab === 'results' ? 'gradient-accent text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-slate-700/50'}`} onClick={() => setActiveTab('results')}>Résultats</button>
-              <button className={`px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 ${activeTab === 'overview' ? 'gradient-accent text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-slate-700/50'}`} onClick={() => setActiveTab('overview')}>Analyse</button>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
+          {/* Desktop Navigation */}
+          <div className="relative hidden lg:block">
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-purple-600/20 rounded-3xl blur-3xl"></div>
+            <div className="relative bg-gradient-to-r from-slate-800/90 to-slate-700/90 backdrop-blur-sm border border-slate-600/50 rounded-3xl p-2">
+              <div className="grid grid-cols-4 gap-2">
+                <button 
+                  className={`px-6 py-4 rounded-2xl text-sm font-semibold transition-all duration-300 flex items-center justify-center space-x-2 ${
+                    activeTab === 'ai-quiz' 
+                      ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg shadow-blue-600/25 scale-105' 
+                      : 'text-slate-300 hover:text-white hover:bg-slate-600/50 hover:scale-102'
+                  }`} 
+                  onClick={() => setActiveTab('ai-quiz')}
+                >
+                  <Bot className="h-4 w-4" />
+                  <span>Créer un Quiz</span>
+                </button>
+                <button 
+                  className={`px-6 py-4 rounded-2xl text-sm font-semibold transition-all duration-300 flex items-center justify-center space-x-2 ${
+                    activeTab === 'quizzes' 
+                      ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg shadow-blue-600/25 scale-105' 
+                      : 'text-slate-300 hover:text-white hover:bg-slate-600/50 hover:scale-102'
+                  }`} 
+                  onClick={() => setActiveTab('quizzes')}
+                >
+                  <FileText className="h-4 w-4" />
+                  <span>Mes Quiz</span>
+                </button>
+                <button 
+                  className={`px-6 py-4 rounded-2xl text-sm font-semibold transition-all duration-300 flex items-center justify-center space-x-2 ${
+                    activeTab === 'results' 
+                      ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg shadow-blue-600/25 scale-105' 
+                      : 'text-slate-300 hover:text-white hover:bg-slate-600/50 hover:scale-102'
+                  }`} 
+                  onClick={() => setActiveTab('results')}
+                >
+                  <BarChart3 className="h-4 w-4" />
+                  <span>Résultats</span>
+                </button>
+                <button 
+                  className={`px-6 py-4 rounded-2xl text-sm font-semibold transition-all duration-300 flex items-center justify-center space-x-2 ${
+                    activeTab === 'overview' 
+                      ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg shadow-blue-600/25 scale-105' 
+                      : 'text-slate-300 hover:text-white hover:bg-slate-600/50 hover:scale-102'
+                  }`} 
+                  onClick={() => setActiveTab('overview')}
+                >
+                  <TrendingUp className="h-4 w-4" />
+                  <span>Analyse</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Mobile Navigation */}
+          <div className="lg:hidden">
+            <div className="relative">
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-purple-600/20 rounded-2xl blur-2xl"></div>
+              <div className="relative bg-gradient-to-r from-slate-800/90 to-slate-700/90 backdrop-blur-sm border border-slate-600/50 rounded-2xl p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-2 rounded-lg">
+                      {activeTab === 'ai-quiz' && <Bot className="h-5 w-5 text-white" />}
+                      {activeTab === 'quizzes' && <FileText className="h-5 w-5 text-white" />}
+                      {activeTab === 'results' && <BarChart3 className="h-5 w-5 text-white" />}
+                      {activeTab === 'overview' && <TrendingUp className="h-5 w-5 text-white" />}
+                    </div>
+                    <div>
+                      <h2 className="text-white font-semibold">
+                        {activeTab === 'ai-quiz' && 'Créer un Quiz'}
+                        {activeTab === 'quizzes' && 'Mes Quiz'}
+                        {activeTab === 'results' && 'Résultats'}
+                        {activeTab === 'overview' && 'Analyse'}
+                      </h2>
+                      <p className="text-slate-400 text-sm">
+                        {activeTab === 'ai-quiz' && 'Génération IA'}
+                        {activeTab === 'quizzes' && 'Gestion des quiz'}
+                        {activeTab === 'results' && 'Analytics'}
+                        {activeTab === 'overview' && 'Vue d\'ensemble'}
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                    className="bg-slate-700/50 hover:bg-slate-600/50 border-slate-600/50 p-2"
+                    variant="outline"
+                  >
+                    {mobileMenuOpen ? <X className="h-5 w-5 text-white" /> : <Menu className="h-5 w-5 text-white" />}
+                  </Button>
+                </div>
+
+                {/* Mobile Menu Dropdown */}
+                {mobileMenuOpen && (
+                  <div className="mt-4 space-y-2 border-t border-slate-600/50 pt-4">
+                    <button
+                      className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-300 ${
+                        activeTab === 'overview'
+                          ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg'
+                          : 'text-slate-300 hover:text-white hover:bg-slate-700/50'
+                      }`}
+                      onClick={() => {
+                        setActiveTab('overview')
+                        setMobileMenuOpen(false)
+                      }}
+                    >
+                      <TrendingUp className="h-5 w-5" />
+                      <div className="text-left">
+                        <div className="font-semibold">Analyse</div>
+                        <div className="text-sm opacity-75">Vue d'ensemble</div>
+                      </div>
+                    </button>
+                    <button
+                      className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-300 ${
+                        activeTab === 'ai-quiz'
+                          ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg'
+                          : 'text-slate-300 hover:text-white hover:bg-slate-700/50'
+                      }`}
+                      onClick={() => {
+                        setActiveTab('ai-quiz')
+                        setMobileMenuOpen(false)
+                      }}
+                    >
+                      <Bot className="h-5 w-5" />
+                      <div className="text-left">
+                        <div className="font-semibold">Créer un Quiz</div>
+                        <div className="text-sm opacity-75">Génération IA</div>
+                      </div>
+                    </button>
+                    <button
+                      className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-300 ${
+                        activeTab === 'quizzes'
+                          ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg'
+                          : 'text-slate-300 hover:text-white hover:bg-slate-700/50'
+                      }`}
+                      onClick={() => {
+                        setActiveTab('quizzes')
+                        setMobileMenuOpen(false)
+                      }}
+                    >
+                      <FileText className="h-5 w-5" />
+                      <div className="text-left">
+                        <div className="font-semibold">Mes Quiz</div>
+                        <div className="text-sm opacity-75">Gestion des quiz</div>
+                      </div>
+                    </button>
+                    <button
+                      className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-300 ${
+                        activeTab === 'results'
+                          ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg'
+                          : 'text-slate-300 hover:text-white hover:bg-slate-700/50'
+                      }`}
+                      onClick={() => {
+                        setActiveTab('results')
+                        setMobileMenuOpen(false)
+                      }}
+                    >
+                      <BarChart3 className="h-5 w-5" />
+                      <div className="text-left">
+                        <div className="font-semibold">Résultats</div>
+                        <div className="text-sm opacity-75">Analytics</div>
+                      </div>
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
           
-          <TabsContent value="overview" className="space-y-6">
-            {/* Statistics Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div className="card-dark gradient-primary p-6 rounded-xl hover-lift">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center">
-                    <FileText className="h-5 w-5 mr-2 text-white" />
-                    <h3 className="font-semibold text-white">Quiz Créés</h3>
-                  </div>
+          <TabsContent value="overview" className="space-y-8">
+            {/* Hero Stats Section */}
+            <div className="relative">
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 to-purple-600/10 rounded-3xl blur-3xl"></div>
+              <div className="relative bg-gradient-to-r from-slate-800/90 to-slate-700/90 backdrop-blur-sm border border-slate-600/50 rounded-3xl p-8">
+                <div className="text-center mb-6 sm:mb-8">
+                  <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent mb-2">
+                    Vue d'ensemble de votre activité
+                  </h2>
+                  <p className="text-slate-400 text-sm sm:text-base lg:text-lg">Suivez vos performances et l'engagement de vos élèves</p>
                 </div>
-                <div className="text-3xl font-bold text-white mb-2">{engagementStats.totalQuizzes}</div>
-                <div className="text-blue-100 text-sm mb-3">
-                  {engagementStats.publishedQuizzes} publiés • {engagementStats.draftQuizzes} brouillons
-                </div>
-                <div className="w-full bg-white/20 rounded-full h-2">
-                  <div className="bg-white h-2 rounded-full transition-all duration-300" style={{ width: `${(engagementStats.publishedQuizzes / Math.max(engagementStats.totalQuizzes, 1)) * 100}%` }}></div>
-                </div>
-              </div>
-              
-              <div className="card-dark gradient-secondary p-6 rounded-xl hover-lift">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center">
-                    <Users className="h-5 w-5 mr-2 text-white" />
-                    <h3 className="font-semibold text-white">Mes Classes</h3>
-                  </div>
-                </div>
-                <div className="text-3xl font-bold text-white mb-2">{totalClassrooms} {totalClassrooms === 1 ? 'classe' : 'classes'}</div>
-                <div className="text-purple-100 text-sm mb-1">
-                  {totalStudents} élèves au total
-                </div>
-                <div className="text-purple-100 text-xs">
-                  ~{averageStudentsPerClass} élèves/classe
-                </div>
-              </div>
-              
-              <div className="card-dark gradient-accent p-6 rounded-xl hover-lift">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center">
-                    <TrendingUp className="h-5 w-5 mr-2 text-white" />
-                    <h3 className="font-semibold text-white">Soumissions</h3>
-                  </div>
-                </div>
-                <div className="text-3xl font-bold text-white mb-2">{engagementStats.totalSubmissions}</div>
-                <div className="text-green-100 text-sm mb-2">
-                  {engagementStats.thisWeekSubmissions} cette semaine
-                </div>
-                <div className="flex items-center">
-                  <Target className="h-3 w-3 mr-1 text-green-100" />
-                  <span className="text-green-100 text-xs">
-                    {((engagementStats.thisWeekSubmissions / Math.max(engagementStats.totalSubmissions, 1)) * 100).toFixed(1)}% récent
-                  </span>
-                </div>
-              </div>
-              
-              <div className="card-dark p-6 rounded-xl hover-lift" style={{ background: 'linear-gradient(135deg, #FF7F59 0%, #FB995D 100%)' }}>
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center">
-                    <Clock className="h-5 w-5 mr-2 text-white" />
-                    <h3 className="font-semibold text-white">Activité</h3>
-                  </div>
-                </div>
-                <div className="text-3xl font-bold text-white mb-2">{engagementStats.thisWeekSubmissions}</div>
-                <div className="text-orange-100 text-sm mb-1">
-                  Activité cette semaine
-                </div>
-                <div className="text-orange-100 text-xs">
-                  {engagementStats.totalSubmissions > 0 ? `${engagementStats.totalSubmissions} réponses au total` : 'Aucune réponse encore'}
-                </div>
-              </div>
-            </div>
-
-            {/* Mes Classes Section */}
-            <div className="card-dark p-6 rounded-xl">
-              <h3 className="text-xl font-semibold text-white mb-4 flex items-center">
-                <Users className="h-5 w-5 mr-2" />
-                Mes Classes
-              </h3>
-              {classrooms.length === 0 ? (
-                <div className="text-center py-8">
-                  <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h4 className="text-lg font-medium text-gray-300 mb-2">Aucune classe assignée</h4>
-                  <p className="text-gray-400">Contactez votre directeur pour être assigné à une classe</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {classrooms.map((classroom) => {
-                    const classStudents = students.filter(s => s.classroom_id === classroom.id)
-                    return (
-                      <div key={classroom.id} className="card-secondary p-4 rounded-lg border border-slate-600">
-                        <div className="flex justify-between items-start mb-3">
-                          <h4 className="font-semibold text-white">{classroom.name}</h4>
-                          <Badge variant="outline" className="text-slate-300 border-slate-500">{classroom.grade}</Badge>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+                  <div className="group relative">
+                    <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-2xl blur-lg opacity-25 group-hover:opacity-40 transition-opacity duration-300"></div>
+                    <div className="relative bg-gradient-to-br from-slate-800 to-slate-700 border border-slate-600/50 p-4 sm:p-6 rounded-2xl hover:scale-105 transition-all duration-300">
+                      <div className="flex items-center justify-between mb-3 sm:mb-4">
+                        <div className="bg-gradient-to-r from-blue-500 to-cyan-500 p-2 sm:p-3 rounded-lg sm:rounded-xl">
+                          <FileText className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                         </div>
-                        <div className="space-y-2">
-                          <div className="text-sm text-slate-300">Élèves: {classStudents.length}</div>
-                          {classStudents.length > 0 && (
-                            <div className="text-xs text-slate-400">
-                              {classStudents.slice(0, 3).map(s => s.user.full_name).join(', ')}
-                              {classStudents.length > 3 && ` et ${classStudents.length - 3} autres`}
-                            </div>
-                          )}
-                          <div className="flex space-x-2 mt-3">
-                            <Button size="sm" variant="outline" className="text-xs">
-                              Voir les élèves
-                            </Button>
-                            <Button size="sm" className="text-xs" onClick={() => setActiveTab('ai-quiz')}>
-                              Créer un quiz
-                            </Button>
-                          </div>
+                        <div className="text-right">
+                          <div className="text-2xl sm:text-3xl font-bold text-white">{totalQuizzes}</div>
+                          <div className="text-xs text-slate-400 uppercase tracking-wide">Total</div>
                         </div>
                       </div>
-                    )
-                  })}
+                      <div className="space-y-1 sm:space-y-2">
+                        <h3 className="text-white font-semibold text-sm sm:text-base">Quiz Créés</h3>
+                        <p className="text-slate-400 text-xs sm:text-sm">Tous vos quiz confondus</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="group relative">
+                    <div className="absolute inset-0 bg-gradient-to-r from-green-500 to-emerald-500 rounded-2xl blur-lg opacity-25 group-hover:opacity-40 transition-opacity duration-300"></div>
+                    <div className="relative bg-gradient-to-br from-slate-800 to-slate-700 border border-slate-600/50 p-4 sm:p-6 rounded-2xl hover:scale-105 transition-all duration-300">
+                      <div className="flex items-center justify-between mb-3 sm:mb-4">
+                        <div className="bg-gradient-to-r from-green-500 to-emerald-500 p-2 sm:p-3 rounded-lg sm:rounded-xl">
+                          <CheckCircle className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+                        </div>
+                        <div className="text-right">
+                          <div className="text-2xl sm:text-3xl font-bold text-white">{publishedQuizzes}</div>
+                          <div className="text-xs text-slate-400 uppercase tracking-wide">Actifs</div>
+                        </div>
+                      </div>
+                      <div className="space-y-1 sm:space-y-2">
+                        <h3 className="text-white font-semibold text-sm sm:text-base">Quiz Publiés</h3>
+                        <p className="text-slate-400 text-xs sm:text-sm">Disponibles aux élèves</p>
+                        <div className="w-full bg-slate-600 rounded-full h-1.5 sm:h-2">
+                          <div 
+                            className="bg-gradient-to-r from-green-500 to-emerald-500 h-1.5 sm:h-2 rounded-full transition-all duration-500" 
+                            style={{ width: `${totalQuizzes > 0 ? (publishedQuizzes / totalQuizzes) * 100 : 0}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="group relative">
+                    <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl blur-lg opacity-25 group-hover:opacity-40 transition-opacity duration-300"></div>
+                    <div className="relative bg-gradient-to-br from-slate-800 to-slate-700 border border-slate-600/50 p-4 sm:p-6 rounded-2xl hover:scale-105 transition-all duration-300">
+                      <div className="flex items-center justify-between mb-3 sm:mb-4">
+                        <div className="bg-gradient-to-r from-purple-500 to-pink-500 p-2 sm:p-3 rounded-lg sm:rounded-xl">
+                          <Users className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+                        </div>
+                        <div className="text-right">
+                          <div className="text-2xl sm:text-3xl font-bold text-white">{totalClassrooms}</div>
+                          <div className="text-xs text-slate-400 uppercase tracking-wide">Classes</div>
+                        </div>
+                      </div>
+                      <div className="space-y-1 sm:space-y-2">
+                        <h3 className="text-white font-semibold text-sm sm:text-base">Classes Gérées</h3>
+                        <p className="text-slate-400 text-xs sm:text-sm">Moyenne: {averageStudentsPerClass} élèves/classe</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="group relative">
+                    <div className="absolute inset-0 bg-gradient-to-r from-orange-500 to-red-500 rounded-2xl blur-lg opacity-25 group-hover:opacity-40 transition-opacity duration-300"></div>
+                    <div className="relative bg-gradient-to-br from-slate-800 to-slate-700 border border-slate-600/50 p-4 sm:p-6 rounded-2xl hover:scale-105 transition-all duration-300">
+                      <div className="flex items-center justify-between mb-3 sm:mb-4">
+                        <div className="bg-gradient-to-r from-orange-500 to-red-500 p-2 sm:p-3 rounded-lg sm:rounded-xl">
+                          <Target className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+                        </div>
+                        <div className="text-right">
+                          <div className="text-2xl sm:text-3xl font-bold text-white">{totalStudents}</div>
+                          <div className="text-xs text-slate-400 uppercase tracking-wide">Élèves</div>
+                        </div>
+                      </div>
+                      <div className="space-y-1 sm:space-y-2">
+                        <h3 className="text-white font-semibold text-sm sm:text-base">Élèves Total</h3>
+                        <p className="text-slate-400 text-xs sm:text-sm">Dans toutes vos classes</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              )}
-            </div>
-
-            {/* Invitations Section */}
-            <div className="card-dark p-6 rounded-xl">
-              <h3 className="text-xl font-semibold text-white mb-4 flex items-center">
-                <Send className="h-5 w-5 mr-2" />
-                Invitations Parents
-              </h3>
-              <ParentInvitationCard />
-            </div>
-
-            {/* Quick Actions */}
-            <div className="card-dark p-6 rounded-xl">
-              <h3 className="text-xl font-semibold text-white mb-4">Actions rapides</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                <button 
-                  onClick={() => setActiveTab('ai-quiz')}
-                  className="h-20 flex flex-col items-center justify-center btn-gradient gradient-primary text-white rounded-lg font-medium transition-all duration-200 hover-lift"
-                >
-                  <Bot className="h-6 w-6 mb-2" />
-                  Créer un Quiz IA
-                </button>
-                <button 
-                  onClick={() => setActiveTab('quizzes')} 
-                  className="h-20 flex flex-col items-center justify-center card-secondary border border-slate-600 text-slate-300 hover:text-white hover:bg-slate-700/50 rounded-lg font-medium transition-all duration-200"
-                >
-                  <FileText className="h-6 w-6 mb-2" />
-                  Mes Quiz
-                </button>
-                <button 
-                  onClick={() => setActiveTab('results')} 
-                  className="h-20 flex flex-col items-center justify-center card-secondary border border-slate-600 text-slate-300 hover:text-white hover:bg-slate-700/50 rounded-lg font-medium transition-all duration-200"
-                >
-                  <BarChart3 className="h-6 w-6 mb-2" />
-                  Résultats
-                </button>
               </div>
             </div>
 
-            {/* Overview empty quiz hint when there is no quiz at all */}
-            {activeTab === 'overview' && quizzes.length === 0 && (
-              <Card>
-                <CardContent className="flex items-center justify-center py-12">
-                  <div className="text-center">
-                    <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">Aucun quiz</h3>
-                    <p className="text-gray-600">Commencez par créer votre premier quiz</p>
+            {/* Activity & Quick Actions */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
+              {/* Recent Activity */}
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-r from-slate-600/10 to-slate-500/10 rounded-2xl blur-2xl"></div>
+                <div className="relative bg-gradient-to-br from-slate-800/90 to-slate-700/90 backdrop-blur-sm border border-slate-600/50 rounded-2xl p-4 sm:p-6">
+                  <div className="flex items-center justify-between mb-4 sm:mb-6">
+                    <h3 className="text-lg sm:text-xl font-bold text-white flex items-center">
+                      <Clock className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3 text-blue-400" />
+                      Activité Récente
+                    </h3>
+                    <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 text-xs sm:text-sm">
+                      {quizzes.length} quiz
+                    </Badge>
                   </div>
-                </CardContent>
-              </Card>
-            )}
+                  
+                  <div className="space-y-3 sm:space-y-4">
+                    {quizzes.slice(0, 4).map((quiz, index) => (
+                      <div key={quiz.id} className="group flex items-center justify-between p-3 sm:p-4 bg-slate-700/30 hover:bg-slate-700/50 rounded-xl transition-all duration-200 border border-slate-600/30 hover:border-slate-500/50">
+                        <div className="flex items-center space-x-3 sm:space-x-4 min-w-0 flex-1">
+                          <div className="relative flex-shrink-0">
+                            <div className={`w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full ${quiz.is_published ? 'bg-green-400' : 'bg-yellow-400'} animate-pulse`}></div>
+                            <div className={`absolute inset-0 w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full ${quiz.is_published ? 'bg-green-400' : 'bg-yellow-400'} opacity-25 animate-ping`}></div>
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-white font-medium group-hover:text-blue-300 transition-colors text-sm sm:text-base truncate">{quiz.title}</p>
+                            <div className="flex items-center space-x-2 mt-1">
+                              <Badge variant={quiz.is_published ? 'default' : 'secondary'} className="text-xs">
+                                {quiz.is_published ? 'Publié' : 'Brouillon'}
+                              </Badge>
+                              <span className="text-slate-400 text-xs hidden sm:inline">•</span>
+                              <span className="text-slate-400 text-xs hidden sm:inline">{quiz.level}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                          <Button size="sm" variant="ghost" className="text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 p-1.5 sm:p-2">
+                            <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                    
+                    {quizzes.length === 0 && (
+                      <div className="text-center py-8 sm:py-12">
+                        <div className="bg-slate-700/30 rounded-full w-12 h-12 sm:w-16 sm:h-16 flex items-center justify-center mx-auto mb-3 sm:mb-4">
+                          <FileText className="h-6 w-6 sm:h-8 sm:w-8 text-slate-400" />
+                        </div>
+                        <p className="text-slate-400 text-base sm:text-lg mb-2">Aucun quiz créé</p>
+                        <p className="text-slate-500 text-xs sm:text-sm">Commencez par créer votre premier quiz</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Quick Actions */}
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 to-purple-600/10 rounded-2xl blur-2xl"></div>
+                <div className="relative bg-gradient-to-br from-slate-800/90 to-slate-700/90 backdrop-blur-sm border border-slate-600/50 rounded-2xl p-4 sm:p-6">
+                  <h3 className="text-lg sm:text-xl font-bold text-white mb-4 sm:mb-6 flex items-center">
+                    <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3 text-purple-400" />
+                    Actions Rapides
+                  </h3>
+                  
+                  <div className="space-y-3 sm:space-y-4">
+                    <button 
+                      onClick={() => setActiveTab('ai-quiz')}
+                      className="w-full group relative overflow-hidden bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 p-3 sm:p-4 rounded-xl transition-all duration-300 hover:scale-105"
+                    >
+                      <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                      <div className="relative flex items-center justify-between">
+                        <div className="flex items-center space-x-2 sm:space-x-3">
+                          <Bot className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+                          <div className="text-left">
+                            <p className="text-white font-semibold text-sm sm:text-base">Créer un Quiz IA</p>
+                            <p className="text-blue-100 text-xs sm:text-sm">Génération automatique</p>
+                          </div>
+                        </div>
+                        <Plus className="h-4 w-4 sm:h-5 sm:w-5 text-white group-hover:rotate-90 transition-transform duration-300" />
+                      </div>
+                    </button>
+
+                    <button 
+                      onClick={() => setActiveTab('quizzes')}
+                      className="w-full group relative overflow-hidden bg-gradient-to-r from-slate-700 to-slate-600 hover:from-slate-600 hover:to-slate-500 p-3 sm:p-4 rounded-xl transition-all duration-300 hover:scale-105 border border-slate-500/50"
+                    >
+                      <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                      <div className="relative flex items-center justify-between">
+                        <div className="flex items-center space-x-2 sm:space-x-3">
+                          <FileText className="h-5 w-5 sm:h-6 sm:w-6 text-slate-300" />
+                          <div className="text-left">
+                            <p className="text-white font-semibold text-sm sm:text-base">Gérer mes Quiz</p>
+                            <p className="text-slate-400 text-xs sm:text-sm">Modifier et publier</p>
+                          </div>
+                        </div>
+                        <Edit className="h-4 w-4 sm:h-5 sm:w-5 text-slate-300 group-hover:text-white transition-colors" />
+                      </div>
+                    </button>
+
+                    <button 
+                      onClick={() => setActiveTab('results')}
+                      className="w-full group relative overflow-hidden bg-gradient-to-r from-slate-700 to-slate-600 hover:from-slate-600 hover:to-slate-500 p-3 sm:p-4 rounded-xl transition-all duration-300 hover:scale-105 border border-slate-500/50"
+                    >
+                      <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                      <div className="relative flex items-center justify-between">
+                        <div className="flex items-center space-x-2 sm:space-x-3">
+                          <BarChart3 className="h-5 w-5 sm:h-6 sm:w-6 text-slate-300" />
+                          <div className="text-left">
+                            <p className="text-white font-semibold text-sm sm:text-base">Voir les Résultats</p>
+                            <p className="text-slate-400 text-xs sm:text-sm">Analytics détaillées</p>
+                          </div>
+                        </div>
+                        <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-slate-300 group-hover:text-white transition-colors" />
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </TabsContent>
           
           <TabsContent value="ai-quiz">
@@ -606,7 +836,18 @@ export function TeacherDashboard() {
           
           
           <TabsContent value="results">
-            <ProgressTracker />
+            <div className="relative">
+              <div className="absolute inset-0 bg-gradient-to-r from-green-600/10 to-blue-600/10 rounded-3xl blur-3xl"></div>
+              <div className="relative bg-gradient-to-r from-slate-800/90 to-slate-700/90 backdrop-blur-sm border border-slate-600/50 rounded-3xl p-8">
+                <div className="text-center mb-8">
+                  <h2 className="text-3xl font-bold bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent mb-2">
+                    Résultats et Analytics
+                  </h2>
+                  <p className="text-slate-400 text-lg">Suivez les performances de vos élèves en temps réel</p>
+                </div>
+                <ProgressTracker />
+              </div>
+            </div>
           </TabsContent>
         </Tabs>
       </main>
