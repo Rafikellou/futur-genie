@@ -136,8 +136,18 @@ export function ParentDashboard() {
             </TabsList>
             
             <TabsContent value="overview" className="space-y-6">
+              {/* Debug info */}
+              {process.env.NODE_ENV === 'development' && (
+                <div className="bg-yellow-100 p-4 rounded">
+                  <p>Debug: availableQuizzes.length = {availableQuizzes.length}</p>
+                  <p>Debug: loading = {loading.toString()}</p>
+                  <p>Debug: error = {error}</p>
+                  <pre>{JSON.stringify(availableQuizzes, null, 2)}</pre>
+                </div>
+              )}
+              
               {/* Recommended Activities Section */}
-              {availableQuizzes.length > 0 && (
+              {availableQuizzes.length > 0 ? (
                 <Card className="border-2 border-orange-200 bg-orange-50">
                   <CardHeader>
                     <CardTitle className="flex items-center text-orange-800">
@@ -172,6 +182,18 @@ export function ParentDashboard() {
                         </Card>
                       ))}
                     </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card className="border-2 border-gray-200 bg-gray-50">
+                  <CardHeader>
+                    <CardTitle className="flex items-center text-gray-600">
+                      <BookOpen className="h-5 w-5 mr-2" />
+                      Aucune activité disponible pour le moment
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-gray-600">Votre enseignant(e) n'a pas encore publié de quiz pour votre classe.</p>
                   </CardContent>
                 </Card>
               )}
