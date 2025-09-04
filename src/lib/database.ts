@@ -81,7 +81,7 @@ export async function getSchoolById(id: string) {
 }
 
 // Classroom operations
-export async function createClassroom(classroomData: TablesInsert<'classrooms'>) {
+export async function createClassroom(classroomData: TablesInsert<'classrooms'> & { teacher_id?: string | null }) {
   // Use server API (service role) to bypass RLS and avoid recursion on insert
   const res = await fetch('/api/classrooms/create', {
     method: 'POST',
@@ -121,13 +121,16 @@ export async function getClassroomsBySchool(schoolId: string) {
 }
 
 export async function updateClassroom(id: string, updates: any) {
-  // Avoid immediate SELECT after UPDATE to prevent potential RLS recursion
-  const { error } = await (supabase as any)
-    .from('classrooms')
-    .update(updates)
-    .eq('id', id)
-
-  if (error) throw error
+  // Use server API (service role) to handle teacher assignment and avoid RLS recursion
+  const res = await fetch('/api/classrooms/update', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id, ...updates }),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err?.error || 'Failed to update classroom')
+  }
 }
 
 export async function deleteClassroom(id: string) {
@@ -140,53 +143,26 @@ export async function deleteClassroom(id: string) {
 }
 
 export async function getClassroomsByTeacher(teacherId: string) {
+  // Teacher is linked via users.classroom_id in the new schema
+  const { data: user, error: userErr } = await supabase
+    .from('users')
+    .select('classroom_id')
+    .eq('id', teacherId)
+    .single()
+
+  if (userErr) throw userErr
+  const u = (user as unknown) as { classroom_id: string | null }
+  if (!u?.classroom_id) return []
+
   const { data, error } = await supabase
     .from('classrooms')
     .select('*')
-    .eq('teacher_id', teacherId)
+    .eq('id', u.classroom_id)
 
   if (error) throw error
   return data
 }
 
-// Student operations
-export async function createStudent(studentData: TablesInsert<'students'>) {
-  const { data, error } = await supabase
-    .from('students')
-    .insert(studentData as any)
-    .select()
-    .single()
-
-  if (error) throw error
-  return data
-}
-
-export async function getStudentsByParent(parentId: string) {
-  const { data, error } = await supabase
-    .from('students')
-    .select(`
-      *,
-      user:users(id, full_name, email),
-      classroom:classrooms(id, name, grade)
-    `)
-    .eq('parent_id', parentId)
-
-  if (error) throw error
-  return data
-}
-
-export async function getStudentsByClassroom(classroomId: string) {
-  const { data, error } = await supabase
-    .from('students')
-    .select(`
-      *,
-      user:users(id, full_name, email)
-    `)
-    .eq('classroom_id', classroomId)
-
-  if (error) throw error
-  return data
-}
 
 // Quiz operations
 export async function createQuiz(quizData: TablesInsert<'quizzes'>) {
@@ -305,19 +281,67 @@ export async function createSubmission(submissionData: TablesInsert<'submissions
   return data
 }
 
-export async function getSubmissionsByStudent(studentId: string) {
+export async function getSubmissionsByParent(parentId: string) {
   const { data, error } = await supabase
     .from('submissions')
     .select(`
       *,
       quiz:quizzes(id, title, description, level)
     `)
-    .eq('student_id', studentId)
+    .eq('parent_id', parentId)
     .order('created_at', { ascending: false })
 
   if (error) throw error
   return data
 }
+
+export async function getParentStats(parentId: string) {
+  try {
+    const { data: submissions, error } = await supabase
+      .from('submissions')
+      .select(`*`)
+      .eq('parent_id', parentId)
+
+    if (error) throw error
+
+    const submissionsData = submissions as Database['public']['Tables']['submissions']['Row'][] | null
+
+    const totalQuizzesTaken = submissionsData?.length || 0
+    const averageScore = totalQuizzesTaken > 0 
+      ? submissionsData!.reduce((sum, sub) => sum + (sub.score / sub.total_questions * 100), 0) / totalQuizzesTaken
+      : 0
+
+    const weekAgo = new Date()
+    weekAgo.setDate(weekAgo.getDate() - 7)
+    const thisWeekSubmissions = submissionsData?.filter(sub => 
+      new Date(sub.created_at!) > weekAgo
+    ) || []
+
+    const perfectScores = submissionsData?.filter(sub => sub.score === sub.total_questions).length || 0
+    
+    const bestScore = totalQuizzesTaken > 0 
+      ? Math.max(...submissionsData!.map(sub => (sub.score / sub.total_questions) * 100))
+      : 0
+
+    return {
+      totalQuizzesTaken,
+      averageScore: Math.round(averageScore),
+      thisWeekQuizzes: thisWeekSubmissions.length,
+      perfectScores,
+      bestScore: Math.round(bestScore)
+    }
+  } catch (error) {
+    console.error('Error fetching parent stats:', error)
+    return {
+      totalQuizzesTaken: 0,
+      averageScore: 0,
+      thisWeekQuizzes: 0,
+      perfectScores: 0,
+      bestScore: 0
+    }
+  }
+}
+
 
 // Additional statistics functions for real-time dashboard data
 export async function getSchoolStatistics(schoolId: string) {
@@ -382,126 +406,7 @@ export async function getQuizEngagementStats(schoolId: string) {
   }
 }
 
-export async function getStudentEngagementStats(studentId: string) {
-  try {
-    const { data: submissions, error } = await supabase
-      .from('submissions')
-      .select(`*`)
-      .eq('student_id', studentId)
 
-    if (error) throw error
-
-    // Type the submissions data properly
-    const submissionsData = submissions as Database['public']['Tables']['submissions']['Row'][] | null
-
-    const totalQuizzesTaken = submissionsData?.length || 0
-    const averageScore = totalQuizzesTaken > 0 
-      ? submissionsData!.reduce((sum, sub) => sum + (sub.score / sub.total_questions * 100), 0) / totalQuizzesTaken
-      : 0
-
-    // This week's activity
-    const weekAgo = new Date()
-    weekAgo.setDate(weekAgo.getDate() - 7)
-    const thisWeekSubmissions = submissionsData?.filter(sub => 
-      new Date(sub.created_at!) > weekAgo
-    ) || []
-
-    const perfectScores = submissionsData?.filter(sub => sub.score === sub.total_questions).length || 0
-    
-    // Get best score
-    const bestScore = totalQuizzesTaken > 0 
-      ? Math.max(...submissionsData!.map(sub => (sub.score / sub.total_questions) * 100))
-      : 0
-
-    return {
-      totalQuizzesTaken,
-      averageScore: Math.round(averageScore),
-      thisWeekQuizzes: thisWeekSubmissions.length,
-      perfectScores,
-      bestScore: Math.round(bestScore)
-    }
-  } catch (error) {
-    console.error('Error fetching student engagement stats:', error)
-    return {
-      totalQuizzesTaken: 0,
-      averageScore: 0,
-      thisWeekQuizzes: 0,
-      perfectScores: 0,
-      bestScore: 0
-    }
-  }
-}
-
-export async function getParentChildrenStats(parentId: string) {
-  try {
-    // Get all children for this parent
-    const { data: children, error: childrenError } = await supabase
-      .from('students')
-      .select(`
-        id,
-        user:users!inner(id, full_name)
-      `)
-      .eq('parent_id', parentId)
-
-    if (childrenError) throw childrenError
-
-    // Type the children data properly
-    const childrenData = children as { id: string; user: { id: string; full_name: string } }[] | null
-
-    if (!childrenData || childrenData.length === 0) {
-      return {
-        totalChildren: 0,
-        totalQuizzesTaken: 0,
-        averageScore: 0,
-        thisWeekActivity: 0,
-        perfectScores: 0
-      }
-    }
-
-    // Get submissions for all children
-    const childrenIds = childrenData.map(child => child.id)
-    const { data: submissions, error: submissionsError } = await supabase
-      .from('submissions')
-      .select(`*`)
-      .in('student_id', childrenIds)
-
-    if (submissionsError) throw submissionsError
-
-    // Type the submissions data properly
-    const submissionsData = submissions as Database['public']['Tables']['submissions']['Row'][] | null
-
-    const totalQuizzesTaken = submissionsData?.length || 0
-    const averageScore = totalQuizzesTaken > 0 
-      ? submissionsData!.reduce((sum, sub) => sum + (sub.score / sub.total_questions * 100), 0) / totalQuizzesTaken
-      : 0
-
-    // This week's activity
-    const weekAgo = new Date()
-    weekAgo.setDate(weekAgo.getDate() - 7)
-    const thisWeekSubmissions = submissionsData?.filter(sub => 
-      new Date(sub.created_at!) > weekAgo
-    ) || []
-
-    const perfectScores = submissionsData?.filter(sub => sub.score === sub.total_questions).length || 0
-
-    return {
-      totalChildren: childrenData.length,
-      totalQuizzesTaken,
-      averageScore: Math.round(averageScore),
-      thisWeekActivity: thisWeekSubmissions.length,
-      perfectScores
-    }
-  } catch (error) {
-    console.error('Error fetching parent children stats:', error)
-    return {
-      totalChildren: 0,
-      totalQuizzesTaken: 0,
-      averageScore: 0,
-      thisWeekActivity: 0,
-      perfectScores: 0
-    }
-  }
-}
 
 export async function getTeacherEngagementStats(teacherId: string) {
   try {

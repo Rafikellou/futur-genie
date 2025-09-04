@@ -158,17 +158,17 @@ export function ParentSignup({ token, onBack }: ParentSignupProps) {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="fullName">Nom complet *</Label>
+            <Label htmlFor="fullName">Nom complet de l'enfant *</Label>
             <Input
               id="fullName"
-              placeholder="Votre nom complet"
+              placeholder="Nom et prénom de l'enfant"
               value={formData.fullName}
               onChange={(e) => handleChange('fullName', e.target.value)}
               required
               disabled={loading}
             />
           </div>
-          
+
           <div className="space-y-2">
             <Label htmlFor="email">Email *</Label>
             <Input

@@ -1,5 +1,31 @@
 import React from 'react'
 import { render, screen, waitFor, fireEvent, act } from '@testing-library/react'
+
+// Mock Supabase client first to avoid hoisting issues
+const mockSupabaseClient = {
+  from: jest.fn().mockReturnThis(),
+  select: jest.fn().mockReturnThis(),
+  insert: jest.fn().mockReturnThis(),
+  update: jest.fn().mockReturnThis(),
+  delete: jest.fn().mockReturnThis(),
+  eq: jest.fn().mockReturnThis(),
+  is: jest.fn().mockReturnThis(),
+  order: jest.fn().mockReturnThis(),
+  single: jest.fn().mockResolvedValue({ data: null, error: null }),
+  auth: {
+    getSession: jest.fn(),
+    getUser: jest.fn(),
+    signInWithPassword: jest.fn(),
+    signUp: jest.fn(),
+    signOut: jest.fn(),
+    onAuthStateChange: jest.fn(),
+  },
+} as any
+
+jest.mock('@/lib/supabase', () => ({
+  supabase: mockSupabaseClient,
+}))
+
 import { TeacherDashboard } from '../TeacherDashboard'
 import { useAuth } from '@/contexts/AuthContext'
 

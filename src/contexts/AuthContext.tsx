@@ -5,12 +5,21 @@ import { User } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 import { UserRole } from '@/types/database'
 import { AuthService, AuthUser, SignUpData } from '@/lib/auth'
+import { getAuthMeta } from '@/lib/auth-meta'
+
+interface AuthClaims {
+  userId: string
+  role: UserRole | null
+  schoolId: string | null
+  classroomId: string | null
+}
 
 interface AuthContextType {
   user: User | null
   profile: AuthUser | null
   loading: boolean
   isNewDirector: boolean
+  claims: AuthClaims | null
   signIn: (email: string, password: string) => Promise<void>
   signUp: (email: string, password: string, userData: Partial<SignUpData>) => Promise<void>
   signOut: () => Promise<void>
@@ -24,15 +33,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<AuthUser | null>(null)
   const [loading, setLoading] = useState(true)
   const [isNewDirector, setIsNewDirector] = useState(false)
+  const [claims, setClaims] = useState<AuthClaims | null>(null)
 
   const refreshProfile = async () => {
     if (user) {
       try {
-        const userProfile = await AuthService.getCurrentUserProfile()
-        setProfile(userProfile)
-        
-        // Check if this is a director without a school assigned yet
-        setIsNewDirector(AuthService.isNewDirector(userProfile))
+        // Utiliser directement les claims du JWT au lieu d'appeler l'API
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session?.user) {
+          const meta = getAuthMeta(session as any)
+          const userProfile: AuthUser = {
+            id: session.user.id,
+            email: session.user.email ?? null,
+            role: meta.role || 'PARENT',
+            school_id: meta.schoolId,
+            full_name: session.user.user_metadata?.full_name ?? null,
+          }
+          setProfile(userProfile)
+          
+          // Check if this is a director without a school assigned yet
+          setIsNewDirector(AuthService.isNewDirector(userProfile))
+        } else {
+          setProfile(null)
+          setIsNewDirector(false)
+        }
       } catch (error) {
         console.error('Error fetching user profile:', error)
         setProfile(null)
@@ -48,6 +72,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null)
+      if (session?.user) {
+        const meta = getAuthMeta(session as any)
+        setClaims({
+          userId: meta.userId,
+          role: (meta.role as UserRole) ?? null,
+          schoolId: meta.schoolId ?? null,
+          classroomId: meta.classroomId ?? null,
+        })
+      } else {
+        setClaims(null)
+      }
       setLoading(false)
     })
 
@@ -56,6 +91,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       setUser(session?.user ?? null)
+      if (session?.user) {
+        const meta = getAuthMeta(session as any)
+        setClaims({
+          userId: meta.userId,
+          role: (meta.role as UserRole) ?? null,
+          schoolId: meta.schoolId ?? null,
+          classroomId: meta.classroomId ?? null,
+        })
+      } else {
+        setClaims(null)
+      }
       setLoading(false)
     })
 
@@ -63,7 +109,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   useEffect(() => {
-    refreshProfile()
+    if (user) {
+      refreshProfile()
+    } else {
+      setProfile(null)
+      setIsNewDirector(false)
+    }
   }, [user])
 
   const signIn = async (email: string, password: string) => {
@@ -75,11 +126,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const signUpData: SignUpData = {
       email,
       password,
-      role: userData.role || 'STUDENT',
+      role: userData.role || 'PARENT',
       full_name: userData.full_name,
       school_id: userData.school_id,
       invitation_token: userData.invitation_token,
       schoolName: userData.schoolName,
+      child_first_name: userData.child_first_name,
       // Pour les directeurs, créer les données d'école
       school_data: userData.role === 'DIRECTOR' && userData.schoolName ? {
         name: userData.schoolName
@@ -99,6 +151,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     profile,
     loading,
     isNewDirector,
+    claims,
     signIn,
     signUp,
     signOut,

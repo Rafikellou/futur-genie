@@ -18,6 +18,8 @@ export interface SignUpData {
     email?: string
   }
   invitation_token?: string
+  // Optional: collected during parent signup for onboarding the child later
+  child_first_name?: string
 }
 
 export interface AuthUser {
@@ -40,6 +42,39 @@ export class AuthService {
     const { email, password, role, school_data, invitation_token, ...userData } = signUpData
 
     try {
+      // Invitation-based signup for TEACHER or PARENT: handle entirely server-side
+      if (invitation_token && (role === 'TEACHER' || role === 'PARENT')) {
+        // 0. Create Auth user + app_metadata + public.users via server route
+        const res = await fetch('/api/invitations/consume', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            token: invitation_token,
+            email,
+            password,
+            full_name: userData.full_name,
+            role,
+          }),
+        })
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}))
+          throw new Error(err?.error || 'Failed to consume invitation')
+        }
+        const { user: userProfile } = await res.json()
+
+        // 1. Sign in to establish a session with correct JWT (app_metadata claims)
+        const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password })
+        if (signInErr) throw signInErr
+
+        return {
+          id: userProfile.id,
+          email: userProfile.email ?? null,
+          role: userProfile.role,
+          school_id: userProfile.school_id ?? null,
+          full_name: userProfile.full_name ?? null,
+        }
+      }
+
       // 1. Créer l'utilisateur Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
@@ -171,24 +206,28 @@ export class AuthService {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return null
 
-      // Fetch via server API (service role) to avoid RLS recursion
-      const res = await fetch('/api/users/me', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: user.id }),
-      })
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}))
-        throw new Error(err?.error || 'Failed to fetch profile')
+      // Utiliser directement Supabase client pour éviter les problèmes d'auth avec l'API
+      const { data: profile, error } = await supabase
+        .from('users')
+        .select('id, email, role, school_id, full_name')
+        .eq('id', user.id)
+        .single()
+
+      if (error) {
+        console.error('Erreur lors de la récupération du profil:', error)
+        return null
       }
-      const { user: profile } = await res.json()
+
+      if (!profile) {
+        return null
+      }
 
       return {
-        id: profile.id,
-        email: profile.email ?? null,
-        role: profile.role,
-        school_id: profile.school_id ?? null,
-        full_name: profile.full_name ?? null,
+        id: (profile as any).id,
+        email: (profile as any).email ?? user.email ?? null,
+        role: (profile as any).role,
+        school_id: (profile as any).school_id ?? null,
+        full_name: (profile as any).full_name ?? null,
       }
     } catch (error) {
       console.error('Erreur lors de la récupération du profil:', error)

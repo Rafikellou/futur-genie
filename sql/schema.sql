@@ -1,109 +1,125 @@
--- Drop existing objects to start fresh (in reverse order of creation)
-DROP TABLE IF EXISTS invitation_links, submissions, quiz_items, quizzes, children, students, classrooms, users, schools CASCADE;
-DROP TYPE IF EXISTS user_role, grade_level CASCADE;
+-- DO NOT EDIT IN CODE: source of truth for DB structure
+-- ============================================================================
+-- SCHEMA – MVP (3 rôles: DIRECTOR, TEACHER, PARENT) — sans table "children"
+-- ============================================================================
 
--- Enable necessary extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- Create custom types/enums
-CREATE TYPE user_role AS ENUM ('DIRECTOR', 'TEACHER', 'PARENT');
-CREATE TYPE grade_level AS ENUM ('CP', 'CE1', 'CE2', 'CM1', 'CM2', '6EME', '5EME', '4EME', '3EME');
+-- Enums via DO blocks (quotes simples à l'intérieur)
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'user_role') THEN
+    EXECUTE 'CREATE TYPE user_role AS ENUM (''DIRECTOR'', ''TEACHER'', ''PARENT'')';
+  END IF;
+END$$;
 
--- Schools table
-CREATE TABLE schools (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    name TEXT NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'grade_level') THEN
+    EXECUTE 'CREATE TYPE grade_level AS ENUM (''CP'',''CE1'',''CE2'',''CM1'',''CM2'',''6EME'',''5EME'',''4EME'',''3EME'')';
+  END IF;
+END$$;
+
+-- Schools
+CREATE TABLE IF NOT EXISTS public.schools (
+  id         uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name       text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT timezone('utc'::text, now())
 );
 
--- Classrooms table
-CREATE TABLE classrooms (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    name TEXT NOT NULL,
-    grade grade_level NOT NULL,
-    school_id UUID NOT NULL REFERENCES schools(id) ON DELETE CASCADE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+-- Classrooms
+CREATE TABLE IF NOT EXISTS public.classrooms (
+  id         uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name       text NOT NULL,
+  grade      grade_level NOT NULL,
+  school_id  uuid NOT NULL REFERENCES public.schools(id) ON DELETE CASCADE,
+  created_at timestamptz NOT NULL DEFAULT timezone('utc'::text, now())
 );
 
--- Users table (extends Supabase auth.users)
-CREATE TABLE users (
-    id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-    role user_role NOT NULL,
-    school_id UUID REFERENCES schools(id) ON DELETE SET NULL,
-    classroom_id UUID REFERENCES classrooms(id) ON DELETE SET NULL, -- Only for TEACHER role
-    email TEXT,
-    full_name TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
-    CONSTRAINT teacher_must_have_classroom CHECK (role <> 'TEACHER' OR classroom_id IS NOT NULL)
+-- Users (extension de auth.users)
+CREATE TABLE IF NOT EXISTS public.users (
+  id               uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  role             user_role NOT NULL,
+  school_id        uuid REFERENCES public.schools(id) ON DELETE SET NULL,
+  classroom_id     uuid REFERENCES public.classrooms(id) ON DELETE SET NULL, -- requis pour TEACHER/PARENT
+  email            text,
+  full_name        text,
+  child_first_name text,  -- champ informatif pour le parent
+  created_at       timestamptz NOT NULL DEFAULT timezone('utc'::text, now()),
+  CONSTRAINT teacher_must_have_classroom CHECK (role <> 'TEACHER' OR classroom_id IS NOT NULL),
+  CONSTRAINT parent_must_have_classroom  CHECK (role <> 'PARENT'  OR classroom_id IS NOT NULL)
 );
 
--- Children table (replaces the old students table)
-CREATE TABLE children (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    parent_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    classroom_id UUID NOT NULL REFERENCES classrooms(id) ON DELETE CASCADE,
-    full_name TEXT NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+-- Quizzes
+CREATE TABLE IF NOT EXISTS public.quizzes (
+  id            uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  title         text NOT NULL,
+  description   text,
+  level         grade_level NOT NULL,
+  owner_id      uuid REFERENCES public.users(id) ON DELETE SET NULL,
+  classroom_id  uuid NOT NULL REFERENCES public.classrooms(id) ON DELETE CASCADE,
+  school_id     uuid NOT NULL REFERENCES public.schools(id) ON DELETE CASCADE,
+  is_published  boolean NOT NULL DEFAULT false,
+  created_at    timestamptz NOT NULL DEFAULT timezone('utc'::text, now())
 );
 
--- Quizzes table
-CREATE TABLE quizzes (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    title TEXT NOT NULL,
-    description TEXT,
-    level grade_level NOT NULL,
-    owner_id UUID REFERENCES users(id) ON DELETE SET NULL, -- Teacher or Director
-    classroom_id UUID REFERENCES classrooms(id) ON DELETE SET NULL, -- For quizzes assigned to a specific class
-    is_published BOOLEAN DEFAULT false,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+-- Quiz items (dénormalisé)
+CREATE TABLE IF NOT EXISTS public.quiz_items (
+  id            uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  quiz_id       uuid NOT NULL REFERENCES public.quizzes(id) ON DELETE CASCADE,
+  question      text NOT NULL,
+  choices       jsonb NOT NULL,
+  answer_keys   text[] NOT NULL,
+  order_index   int4 NOT NULL DEFAULT 0,
+  school_id     uuid NOT NULL REFERENCES public.schools(id) ON DELETE CASCADE,
+  classroom_id  uuid NOT NULL REFERENCES public.classrooms(id) ON DELETE CASCADE,
+  created_at    timestamptz NOT NULL DEFAULT timezone('utc'::text, now())
 );
 
--- Quiz items/questions table
-CREATE TABLE quiz_items (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    quiz_id UUID NOT NULL REFERENCES quizzes(id) ON DELETE CASCADE,
-    question TEXT NOT NULL,
-    choices JSONB NOT NULL, -- [{id: string, text: string}]
-    answer_keys TEXT[] NOT NULL, -- Array of correct choice IDs
-    order_index INTEGER NOT NULL DEFAULT 0,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+-- Submissions (réponses des parents)
+CREATE TABLE IF NOT EXISTS public.submissions (
+  id               uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  quiz_id          uuid NOT NULL REFERENCES public.quizzes(id) ON DELETE CASCADE,
+  parent_id        uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  answers          jsonb NOT NULL,
+  score            int4 NOT NULL DEFAULT 0,
+  total_questions  int4 NOT NULL DEFAULT 0,
+  school_id        uuid NOT NULL REFERENCES public.schools(id) ON DELETE CASCADE,
+  classroom_id     uuid NOT NULL REFERENCES public.classrooms(id) ON DELETE CASCADE,
+  created_at       timestamptz NOT NULL DEFAULT timezone('utc'::text, now())
 );
 
--- Quiz submissions table
-CREATE TABLE submissions (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    quiz_id UUID NOT NULL REFERENCES quizzes(id) ON DELETE CASCADE,
-    child_id UUID NOT NULL REFERENCES children(id) ON DELETE CASCADE,
-    parent_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE, -- To link submission to the parent user
-    answers JSONB NOT NULL, -- {questionId: [choiceId]}
-    score INTEGER NOT NULL DEFAULT 0,
-    total_questions INTEGER NOT NULL DEFAULT 0,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+-- Invitation links (toujours liés à une classe)
+CREATE TABLE IF NOT EXISTS public.invitation_links (
+  id           uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  school_id    uuid NOT NULL REFERENCES public.schools(id) ON DELETE CASCADE,
+  classroom_id uuid NOT NULL REFERENCES public.classrooms(id) ON DELETE CASCADE,
+  intended_role user_role NOT NULL, -- Store the intended role for the invitation
+  token        text NOT NULL UNIQUE,
+  expires_at   timestamptz NOT NULL,
+  used_at      timestamptz,
+  created_by   uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  created_at   timestamptz NOT NULL DEFAULT timezone('utc'::text, now())
 );
 
--- Invitation links table for parent onboarding
-CREATE TABLE invitation_links (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    school_id UUID NOT NULL REFERENCES schools(id) ON DELETE CASCADE,
-    classroom_id UUID NOT NULL REFERENCES classrooms(id) ON DELETE CASCADE,
-    token TEXT NOT NULL UNIQUE,
-    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
-    used_at TIMESTAMP WITH TIME ZONE,
-    created_by UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
-);
+-- Indexes
+CREATE INDEX IF NOT EXISTS idx_users_role           ON public.users(role);
+CREATE INDEX IF NOT EXISTS idx_users_school         ON public.users(school_id);
+CREATE INDEX IF NOT EXISTS idx_users_classroom      ON public.users(classroom_id);
 
--- Create indexes for better performance
-CREATE INDEX idx_users_school_id ON users(school_id);
-CREATE INDEX idx_users_role ON users(role);
-CREATE INDEX idx_users_classroom_id ON users(classroom_id);
-CREATE INDEX idx_classrooms_school_id ON classrooms(school_id);
-CREATE INDEX idx_children_parent_id ON children(parent_id);
-CREATE INDEX idx_children_classroom_id ON children(classroom_id);
-CREATE INDEX idx_quizzes_owner_id ON quizzes(owner_id);
-CREATE INDEX idx_quizzes_classroom_id ON quizzes(classroom_id);
-CREATE INDEX idx_quiz_items_quiz_id ON quiz_items(quiz_id);
-CREATE INDEX idx_submissions_quiz_id ON submissions(quiz_id);
-CREATE INDEX idx_submissions_child_id ON submissions(child_id);
-CREATE INDEX idx_submissions_parent_id ON submissions(parent_id);
-CREATE INDEX idx_invitation_links_token ON invitation_links(token);
+CREATE INDEX IF NOT EXISTS idx_classrooms_school    ON public.classrooms(school_id);
+
+CREATE INDEX IF NOT EXISTS idx_quizzes_owner        ON public.quizzes(owner_id);
+CREATE INDEX IF NOT EXISTS idx_quizzes_class        ON public.quizzes(classroom_id);
+CREATE INDEX IF NOT EXISTS idx_quizzes_school       ON public.quizzes(school_id);
+
+CREATE INDEX IF NOT EXISTS idx_items_quiz           ON public.quiz_items(quiz_id);
+CREATE INDEX IF NOT EXISTS idx_items_class          ON public.quiz_items(classroom_id);
+CREATE INDEX IF NOT EXISTS idx_items_school         ON public.quiz_items(school_id);
+
+CREATE INDEX IF NOT EXISTS idx_submissions_quiz     ON public.submissions(quiz_id);
+CREATE INDEX IF NOT EXISTS idx_submissions_parent   ON public.submissions(parent_id);
+CREATE INDEX IF NOT EXISTS idx_submissions_class    ON public.submissions(classroom_id);
+CREATE INDEX IF NOT EXISTS idx_submissions_school   ON public.submissions(school_id);
+
+CREATE INDEX IF NOT EXISTS idx_invites_token        ON public.invitation_links(token);

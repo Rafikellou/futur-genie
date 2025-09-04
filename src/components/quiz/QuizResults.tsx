@@ -20,9 +20,12 @@ import {
   RotateCcw,
   Loader2,
   Eye,
-  EyeOff
+  EyeOff,
+  ShieldAlert
 } from 'lucide-react'
 import { getQuizWithItems, getSubmissionsByQuiz } from '@/lib/database'
+import { handleSupabaseError } from '@/lib/error-handler'
+import { checkPermission } from '@/lib/permissions'
 
 interface QuizQuestion {
   id: string
@@ -48,21 +51,15 @@ interface Quiz {
 interface Submission {
   id: string
   quiz_id: string
-  student_id: string
   answers: Record<string, string[]>
   score: number
   total_questions: number
   created_at: string
-  student?: {
-    id: string
-    full_name: string | null
-  }
 }
 
 interface QuizResultsProps {
   submissionId?: string
   quizId?: string
-  studentId?: string
   userSubmission?: Submission
   onBack: () => void
   onRetakeQuiz?: () => void
@@ -71,12 +68,12 @@ interface QuizResultsProps {
 export function QuizResults({ 
   submissionId, 
   quizId, 
-  studentId, 
   userSubmission, 
   onBack, 
   onRetakeQuiz 
 }: QuizResultsProps) {
-  const { profile } = useAuth()
+  const { profile, claims } = useAuth()
+  const canView = checkPermission(claims?.role ?? null, 'canViewQuizResults')
   const [quiz, setQuiz] = useState<Quiz | null>(null)
   const [submission, setSubmission] = useState<Submission | null>(userSubmission || null)
   const [allSubmissions, setAllSubmissions] = useState<Submission[]>([])
@@ -89,7 +86,7 @@ export function QuizResults({
 
   useEffect(() => {
     fetchData()
-  }, [submissionId, quizId, studentId])
+  }, [submissionId, quizId])
 
   const fetchData = async () => {
     try {
@@ -124,7 +121,8 @@ export function QuizResults({
       }
 
     } catch (error: any) {
-      setError(error.message || 'Erreur lors du chargement des résultats')
+      handleSupabaseError(error)
+      setError('Erreur lors du chargement des résultats')
     } finally {
       setLoading(false)
     }
@@ -196,6 +194,26 @@ export function QuizResults({
       hour: '2-digit',
       minute: '2-digit'
     })
+  }
+
+  if (!canView) {
+    return (
+      <Card className="max-w-2xl mx-auto p-8">
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <ShieldAlert className="h-5 w-5 mr-2 text-red-500" />
+            Accès non autorisé
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p>Vous n'avez pas les permissions nécessaires pour consulter ces résultats.</p>
+          <Button onClick={onBack} className="mt-4">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Retour
+          </Button>
+        </CardContent>
+      </Card>
+    )
   }
 
   if (loading) {

@@ -31,7 +31,7 @@ import {
   getQuizzesByTeacher, 
   getSubmissionsByQuiz, 
   getClassroomsByTeacher,
-  getStudentsByClassroom 
+  getUsersBySchool,
 } from '@/lib/database'
 
 interface Quiz {
@@ -75,7 +75,6 @@ interface Classroom {
 interface Student {
   id: string
   classroom_id: string | null
-  parent_id: string
   user: {
     id: string
     full_name: string | null
@@ -138,21 +137,25 @@ export function ProgressTracker() {
       setLoading(true)
       
       // Fetch teacher's data
-      const [teacherQuizzes, teacherClassrooms] = await Promise.all([
+      const [teacherQuizzes, _teacherClassrooms] = await Promise.all([
         getQuizzesByTeacher(profile.id),
         getClassroomsByTeacher(profile.id)
-      ])
-      
-      setQuizzes(teacherQuizzes as Quiz[])
-      setClassrooms(teacherClassrooms as Classroom[])
-      
-      // Fetch all students from teacher's classrooms
-      const students: Student[] = []
-      for (const classroom of teacherClassrooms as Classroom[]) {
-        const classroomStudents = await getStudentsByClassroom(classroom.id)
-        students.push(...(classroomStudents as Student[]))
+      ]);
+
+      const teacherClassrooms = _teacherClassrooms as Classroom[];
+
+      setQuizzes(teacherQuizzes as Quiz[]);
+      setClassrooms(teacherClassrooms);
+
+      // Fetch all students from the school and filter by classroom
+      if (teacherClassrooms.length > 0 && profile.school_id) {
+        const schoolUsers = await getUsersBySchool(profile.school_id);
+        const classroomIds = new Set(teacherClassrooms.map(c => c.id));
+        const students = schoolUsers.filter(
+          (u: any) => u.classroom_id && classroomIds.has(u.classroom_id)
+        );
+        setAllStudents(students as Student[]);
       }
-      setAllStudents(students)
       
     } catch (error: any) {
       setError(error.message || 'Erreur lors du chargement des données')

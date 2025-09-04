@@ -5,10 +5,9 @@ import { useSearchParams } from 'next/navigation'
 import { DirectorSignup } from './DirectorSignup'
 import { TeacherSignup } from './TeacherSignup'
 import { ParentSignup } from './ParentSignup'
-import { StudentSignup } from './StudentSignup'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { School, GraduationCap, Users, BookOpen } from 'lucide-react'
+import { School, GraduationCap, Users } from 'lucide-react'
 
 interface SignupRouterProps {
   onBack?: () => void
@@ -23,7 +22,7 @@ export function SignupRouter({ onBack }: SignupRouterProps) {
 
   useEffect(() => {
     // If there's a role in the URL params, auto-select it
-    if (roleParam && ['teacher', 'parent', 'student'].includes(roleParam.toLowerCase())) {
+    if (roleParam && ['teacher', 'parent'].includes(roleParam.toLowerCase())) {
       setSelectedRole(roleParam.toLowerCase())
     }
   }, [roleParam])
@@ -35,9 +34,6 @@ export function SignupRouter({ onBack }: SignupRouterProps) {
     }
     if (selectedRole === 'parent' || roleParam === 'parent') {
       return <ParentSignup token={token} onBack={onBack} />
-    }
-    if (selectedRole === 'student' || roleParam === 'student') {
-      return <StudentSignup token={token} onBack={onBack} />
     }
   }
 
@@ -51,9 +47,6 @@ export function SignupRouter({ onBack }: SignupRouterProps) {
   if (selectedRole === 'parent') {
     return <ParentSignup onBack={() => setSelectedRole(null)} />
   }
-  if (selectedRole === 'student') {
-    return <StudentSignup onBack={() => setSelectedRole(null)} />
-  }
 
   // Show role selection
   return (
@@ -61,7 +54,7 @@ export function SignupRouter({ onBack }: SignupRouterProps) {
       <CardHeader>
         <CardTitle>Créer un compte</CardTitle>
         <CardDescription>
-          Choisissez votre rôle pour commencer
+          Seuls les directeurs peuvent créer un compte sans invitation. Choisissez votre rôle.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -73,7 +66,7 @@ export function SignupRouter({ onBack }: SignupRouterProps) {
           <School className="h-6 w-6 text-blue-600" />
           <div>
             <div className="font-medium">Directeur d'école</div>
-            <div className="text-sm text-gray-500">Créer une nouvelle école</div>
+            <div className="text-sm text-gray-500">Créer une nouvelle école (sans invitation)</div>
           </div>
         </Button>
 
@@ -98,18 +91,6 @@ export function SignupRouter({ onBack }: SignupRouterProps) {
           <div>
             <div className="font-medium">Parent</div>
             <div className="text-sm text-gray-500">Suivre la scolarité de mon enfant</div>
-          </div>
-        </Button>
-
-        <Button
-          variant="outline"
-          className="w-full h-16 flex items-center justify-start space-x-4 text-left"
-          onClick={() => setSelectedRole('student')}
-        >
-          <BookOpen className="h-6 w-6 text-blue-600" />
-          <div>
-            <div className="font-medium">Élève</div>
-            <div className="text-sm text-gray-500">Accéder à mes cours et quiz</div>
           </div>
         </Button>
 

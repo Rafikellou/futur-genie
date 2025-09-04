@@ -1,5 +1,6 @@
 import React from 'react'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { Button } from '../button'
 
 describe('Button Component', () => {
@@ -45,25 +46,28 @@ describe('Button Component', () => {
     expect(screen.getByRole('button')).toHaveClass('h-10', 'w-10')
   })
 
-  it('should handle click events', () => {
+  it('should handle click events', async () => {
+    const user = userEvent.setup()
     const handleClick = jest.fn()
     render(<Button onClick={handleClick}>Click me</Button>)
-    
+
     const button = screen.getByRole('button', { name: /click me/i })
-    fireEvent.click(button)
-    
+    await user.click(button)
+
     expect(handleClick).toHaveBeenCalledTimes(1)
   })
 
-  it('should be disabled when disabled prop is true', () => {
+  it('should be disabled when disabled prop is true', async () => {
+    const user = userEvent.setup()
     const handleClick = jest.fn()
     render(<Button disabled onClick={handleClick}>Disabled Button</Button>)
-    
+
     const button = screen.getByRole('button', { name: /disabled button/i })
     expect(button).toBeDisabled()
     expect(button).toHaveClass('disabled:pointer-events-none', 'disabled:opacity-50')
-    
-    fireEvent.click(button)
+
+    // userEvent.click does not fire on disabled elements, which is the correct behavior
+    await user.click(button).catch(() => {})
     expect(handleClick).not.toHaveBeenCalled()
   })
 
@@ -94,18 +98,20 @@ describe('Button Component', () => {
     expect(ref.current).toHaveTextContent('Button with ref')
   })
 
-  it('should handle keyboard events', () => {
+    it('should handle keyboard events', async () => {
+    const user = userEvent.setup()
     const handleClick = jest.fn()
     render(<Button onClick={handleClick}>Keyboard Button</Button>)
-    
+
     const button = screen.getByRole('button', { name: /keyboard button/i })
-    
+    button.focus()
+
     // Test Enter key
-    fireEvent.keyDown(button, { key: 'Enter', code: 'Enter' })
+    await user.keyboard('{Enter}')
     expect(handleClick).toHaveBeenCalledTimes(1)
-    
+
     // Test Space key
-    fireEvent.keyDown(button, { key: ' ', code: 'Space' })
+    await user.keyboard(' ')
     expect(handleClick).toHaveBeenCalledTimes(2)
   })
 

@@ -19,15 +19,30 @@ export async function POST(req: Request) {
 
     const supabase = createClient(url, serviceKey, { auth: { persistSession: false } })
 
-    const { error } = await supabase
+    // 1) Create classroom (no teacher_id column in classrooms table)
+    const { data: classroom, error: createErr } = await supabase
       .from('classrooms')
-      .insert({ name, grade, school_id, teacher_id: teacher_id ?? null } as any)
+      .insert({ name, grade, school_id } as any)
+      .select('id')
+      .single()
 
-    if (error) {
-      return NextResponse.json({ error: error.message, code: error.code }, { status: 500 })
+    if (createErr) {
+      return NextResponse.json({ error: createErr.message, code: createErr.code }, { status: 500 })
     }
 
-    return NextResponse.json({ ok: true }, { status: 201 })
+    // 2) Optionally assign a teacher by setting users.classroom_id
+    if (teacher_id) {
+      const { error: assignErr } = await supabase
+        .from('users')
+        .update({ classroom_id: classroom!.id })
+        .eq('id', teacher_id)
+
+      if (assignErr) {
+        return NextResponse.json({ error: assignErr.message, code: assignErr.code }, { status: 500 })
+      }
+    }
+
+    return NextResponse.json({ ok: true, classroom_id: classroom!.id }, { status: 201 })
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Unexpected error' }, { status: 500 })
   }

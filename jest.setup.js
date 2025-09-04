@@ -43,63 +43,78 @@ jest.mock('next/navigation', () => ({
   },
 }))
 
-// Mock Supabase client
-jest.mock('@supabase/supabase-js', () => ({
-  createClient: jest.fn(() => ({
-    auth: {
-      getSession: jest.fn(),
-      getUser: jest.fn(),
-      signInWithPassword: jest.fn(),
-      signUp: jest.fn(),
-      signOut: jest.fn(),
-      onAuthStateChange: jest.fn(),
-    },
-    from: jest.fn(() => ({
-      select: jest.fn(() => ({
-        eq: jest.fn(() => ({
-          data: [],
-          error: null,
-        })),
-        order: jest.fn(() => ({
-          data: [],
-          error: null,
-        })),
-        limit: jest.fn(() => ({
-          data: [],
-          error: null,
-        })),
-        single: jest.fn(() => ({
-          data: null,
-          error: null,
-        })),
-      })),
-      insert: jest.fn(() => ({
-        select: jest.fn(() => ({
-          single: jest.fn(() => ({
-            data: null,
-            error: null,
-          })),
-        })),
-      })),
-      update: jest.fn(() => ({
-        eq: jest.fn(() => ({
-          select: jest.fn(() => ({
-            single: jest.fn(() => ({
-              data: null,
-              error: null,
-            })),
-          })),
-        })),
-      })),
-      delete: jest.fn(() => ({
-        eq: jest.fn(() => ({
-          data: null,
-          error: null,
-        })),
-      })),
-    })),
-  })),
-}))
+// // Mock Supabase client
+// jest.mock('@supabase/supabase-js', () => ({
+//   createClient: jest.fn(() => ({
+//     auth: {
+//       getSession: jest.fn(async () => ({ data: { session: null }, error: null })),
+//       getUser: jest.fn(async () => ({ data: { user: null }, error: null })),
+//       signInWithPassword: jest.fn(async () => ({ data: { user: { id: 'test-user-id' } }, error: null })),
+//       signUp: jest.fn(async () => ({ data: { user: { id: 'test-user-id' } }, error: null })),
+//       signOut: jest.fn(async () => ({ error: null })),
+//       onAuthStateChange: jest.fn(),
+//       admin: {
+//         createUser: jest.fn(async () => ({ data: { user: { id: 'test-user-id' } }, error: null })),
+//         updateUserById: jest.fn(async () => ({ data: { user: { id: 'test-user-id' } }, error: null })),
+//         deleteUser: jest.fn(async () => ({ data: {}, error: null })),
+//       },
+//     },
+//     from: jest.fn(() => ({
+//       select: jest.fn(() => ({
+//         eq: jest.fn(() => ({
+//           data: [],
+//           error: null,
+//         })),
+//         gt: jest.fn(() => ({
+//           is: jest.fn(() => ({
+//             single: jest.fn(() => ({ data: null, error: null })),
+//           })),
+//         })),
+//         order: jest.fn(() => ({
+//           data: [],
+//           error: null,
+//         })),
+//         limit: jest.fn(() => ({
+//           data: [],
+//           error: null,
+//         })),
+//         single: jest.fn(() => ({
+//           data: null,
+//           error: null,
+//         })),
+//       })),
+//       insert: jest.fn(() => ({
+//         select: jest.fn(() => ({
+//           single: jest.fn(() => ({
+//             data: null,
+//             error: null,
+//           })),
+//         })),
+//       })),
+//       upsert: jest.fn(() => ({
+//         select: jest.fn(() => ({
+//           single: jest.fn(() => ({ data: null, error: null })),
+//         })),
+//       })),
+//       update: jest.fn(() => ({
+//         eq: jest.fn(() => ({
+//           select: jest.fn(() => ({
+//             single: jest.fn(() => ({
+//               data: null,
+//               error: null,
+//             })),
+//           })),
+//         })),
+//       })),
+//       delete: jest.fn(() => ({
+//         eq: jest.fn(() => ({
+//           data: null,
+//           error: null,
+//         })),
+//       })),
+//     })),
+//   })),
+// }))
 
 // Mock window.matchMedia
 Object.defineProperty(window, 'matchMedia', {

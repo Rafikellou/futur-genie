@@ -13,7 +13,7 @@ import {
   getClassroomsByTeacher, 
   getQuizzesByTeacher, 
   getSubmissionsByQuiz, 
-  getStudentsByClassroom,
+  getUsersBySchool,
   getTeacherEngagementStats
 } from '@/lib/database'
 import { AIQuizCreator } from '@/components/teacher/AIQuizCreator'
@@ -47,11 +47,22 @@ interface Classroom {
 interface Student {
   id: string
   classroom_id: string | null
-  parent_id: string
   user: {
     id: string
     full_name: string | null
     email: string | null
+  }
+}
+
+interface User {
+  id: string
+  email?: string
+  app_metadata: {
+    role: string
+  }
+  user_metadata: {
+    full_name?: string
+    classroom_id?: string
   }
 }
 
@@ -116,14 +127,22 @@ export function TeacherDashboard() {
       setQuizzes(quizzesData as Quiz[])
       setEngagementStats(engagement)
       
-      // If teacher has classrooms, fetch students
-      if (classroomsData.length > 0) {
-        const allStudents: Student[] = []
-        for (const classroom of classroomsData as Classroom[]) {
-          const classroomStudents = await getStudentsByClassroom(classroom.id)
-          allStudents.push(...(classroomStudents as Student[]))
-        }
-        setStudents(allStudents)
+      // If teacher has a school, fetch all students for that school
+      if (profile.school_id) {
+        const allUsers = await getUsersBySchool(profile.school_id)
+        const studentUsers = allUsers.filter((user: User) => user.app_metadata.role === 'STUDENT')
+        
+        const studentsData = studentUsers.map((user: User) => ({
+          id: user.id,
+          classroom_id: user.user_metadata.classroom_id || null,
+          user: {
+            id: user.id,
+            full_name: user.user_metadata.full_name || null,
+            email: user.email || null,
+          },
+        }))
+        
+        setStudents(studentsData as Student[])
       }
       
       setError(null)

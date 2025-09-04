@@ -29,9 +29,6 @@ export default function DashboardPage() {
           case 'PARENT':
             router.push('/parent')
             break
-          case 'STUDENT':
-            router.push('/student')
-            break
           default:
             router.push('/')
         }

@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
       .from('submissions')
       .select(`
         *,
-        student:users!inner(id, full_name),
+        parent:users!inner(id, full_name),
         quiz:quizzes!inner(
           id,
           title,

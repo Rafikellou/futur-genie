@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -23,8 +22,6 @@ export function DirectorSignup({ onBack }: DirectorSignupProps) {
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  
-  const { signUp } = useAuth()
 
   const handleChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }))
@@ -52,12 +49,34 @@ export function DirectorSignup({ onBack }: DirectorSignupProps) {
     setError(null)
 
     try {
-      // Use the centralized auth service for atomic school + director creation
-      await signUp(formData.email, formData.password, {
-        role: 'DIRECTOR',
-        full_name: formData.fullName,
-        schoolName: formData.schoolName // This will be handled atomically by AuthService
+      // Utiliser la nouvelle route serveur pour signup directeur
+      const res = await fetch('/api/auth/signup-director', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+          fullName: formData.fullName,
+          schoolName: formData.schoolName
+        })
       })
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err?.error || 'Échec de la création du compte')
+      }
+
+      const { needRefresh } = await res.json()
+      
+      // Rafraîchir la session pour obtenir le JWT avec app_metadata
+      if (needRefresh) {
+        const { supabase } = await import('@/lib/supabase')
+        await supabase.auth.signOut()
+        await supabase.auth.signInWithPassword({ 
+          email: formData.email, 
+          password: formData.password 
+        })
+      }
       
       // Success - user will be redirected automatically by auth context
     } catch (error: any) {

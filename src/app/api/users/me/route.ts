@@ -1,36 +1,28 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 
-export async function POST(req: NextRequest) {
-  try {
-    const { id } = await req.json()
-    if (!id || typeof id !== 'string') {
-      return NextResponse.json({ error: 'Missing user id' }, { status: 400 })
-    }
+export async function GET() {
+  const supabase = createRouteHandlerClient({ cookies });
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: 'unauthenticated' }, { status: 401 });
 
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  // profil SQL (protégé par RLS p_users_self_select)
+  const { data: profile, error } = await supabase
+    .from('users').select('*').eq('id', user.id).single();
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-    if (!url || !serviceRoleKey) {
-      return NextResponse.json({ error: 'Server is not configured for admin operations' }, { status: 500 })
-    }
+  const role = user.app_metadata?.user_role ?? profile?.role ?? null;
+  const schoolId = user.app_metadata?.school_id ?? profile?.school_id ?? null;
+  const classroomId = user.app_metadata?.classroom_id ?? profile?.classroom_id ?? null;
 
-    const admin = createClient(url, serviceRoleKey, { auth: { persistSession: false } })
-
-    const { data, error } = await admin
-      .from('users')
-      .select('*')
-      .eq('id', id)
-      .single()
-
-    if (error) {
-      console.error('Admin get user error:', error)
-      return NextResponse.json({ error: 'Failed to fetch user profile', details: error }, { status: 500 })
-    }
-
-    return NextResponse.json({ user: data }, { status: 200 })
-  } catch (e) {
-    console.error('Unexpected error fetching user profile:', e)
-    return NextResponse.json({ error: 'Unexpected error' }, { status: 500 })
-  }
+  // ✅ Pas d'erreur si Directeur (classroomId peut être null)
+  return NextResponse.json({
+    id: user.id,
+    email: profile?.email ?? user.email,
+    fullName: profile?.full_name ?? null,
+    role,
+    schoolId,
+    classroomId // peut être null si DIRECTOR
+  });
 }

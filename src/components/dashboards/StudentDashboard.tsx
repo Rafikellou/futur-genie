@@ -12,9 +12,8 @@ import { GraduationCap, LogOut, BookOpen, Trophy, Clock, Star, Play, CheckCircle
 import { 
   getQuizzesByLevel, 
   getQuizzesByClassroom, 
-  getSubmissionsByStudent, 
   getUserById,
-  getStudentEngagementStats
+  getSubmissionsByParent
 } from '@/lib/database'
 import { QuizTaking } from '@/components/student/QuizTaking'
 import { QuizResults } from '@/components/quiz/QuizResults'
@@ -33,7 +32,7 @@ interface Quiz {
 interface Submission {
   id: string
   quiz_id: string
-  student_id: string
+  parent_id: string
   answers: any
   score: number
   total_questions: number
@@ -49,7 +48,6 @@ interface Submission {
 interface StudentProfile {
   id: string
   classroom_id: string | null
-  parent_id: string
   user: {
     id: string
     full_name: string | null
@@ -74,15 +72,6 @@ export function StudentDashboard() {
   const [submissions, setSubmissions] = useState<Submission[]>([])
   const [studentData, setStudentData] = useState<StudentProfile | null>(null)
   
-  // Real-time engagement statistics
-  const [engagementStats, setEngagementStats] = useState({
-    totalQuizzesTaken: 0,
-    averageScore: 0,
-    thisWeekQuizzes: 0,
-    perfectScores: 0,
-    bestScore: 0
-  })
-  
   useEffect(() => {
     if (profile?.id) {
       fetchStudentData()
@@ -100,10 +89,9 @@ export function StudentDashboard() {
       setLoading(true)
       
       // Fetch student data, submissions, and engagement stats in parallel
-      const [studentInfo, studentSubmissions, engagement] = await Promise.all([
+      const [studentInfo, parentSubmissions] = await Promise.all([
         getUserById(profile.id),
-        getSubmissionsByStudent(profile.id),
-        getStudentEngagementStats(profile.id)
+        getSubmissionsByParent(profile.id)
       ])
       
       // Get student's classroom info from the user data
@@ -125,9 +113,8 @@ export function StudentDashboard() {
       
       setSelfServiceQuizzes(selfQuizzes as Quiz[])
       setClassroomQuizzes(classQuizzes as Quiz[])
-      setSubmissions(studentSubmissions as Submission[])
+      setSubmissions(parentSubmissions as Submission[])
       setStudentData(studentRecord)
-      setEngagementStats(engagement)
       
     } catch (error: any) {
       setError(error.message || 'Erreur lors du chargement des données')
@@ -140,17 +127,6 @@ export function StudentDashboard() {
     // Simple logic to determine student level
     // In a real app, this would be based on classroom assignment or profile data
     return 'CP' // Default level
-  }
-  
-  const getStudentStats = () => {
-    const totalQuizzesTaken = submissions.length
-    const averageScore = totalQuizzesTaken > 0 
-      ? Math.round(submissions.reduce((sum, sub) => sum + (sub.score / sub.total_questions * 100), 0) / totalQuizzesTaken)
-      : 0
-    const perfectScores = submissions.filter(sub => sub.score === sub.total_questions).length
-    const availableQuizzes = selfServiceQuizzes.length + classroomQuizzes.length
-    
-    return { totalQuizzesTaken, averageScore, perfectScores, availableQuizzes }
   }
   
   const getQuizStatus = (quiz: Quiz) => {
@@ -221,7 +197,6 @@ export function StudentDashboard() {
     )
   }
 
-  const { totalQuizzesTaken, averageScore, perfectScores, availableQuizzes } = getStudentStats()
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -271,119 +246,6 @@ export function StudentDashboard() {
                 <p className="text-purple-100">Prêt pour de nouveaux défis aujourd'hui ?</p>
               </CardContent>
             </Card>
-            
-            {/* Statistics Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <Card className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-                <CardHeader className="pb-2">
-                  <CardTitle className="flex items-center text-white">
-                    <BookOpen className="h-5 w-5 mr-2" />
-                    Quiz Complétés
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold">{engagementStats.totalQuizzesTaken}</div>
-                  <div className="text-blue-100 text-sm">
-                    sur {availableQuizzes} disponibles
-                  </div>
-                  <Progress value={(engagementStats.totalQuizzesTaken / Math.max(availableQuizzes, 1)) * 100} className="mt-2 h-2" />
-                </CardContent>
-              </Card>
-              
-              <Card className="bg-gradient-to-r from-green-500 to-green-600 text-white">
-                <CardHeader className="pb-2">
-                  <CardTitle className="flex items-center text-white">
-                    <Star className="h-5 w-5 mr-2" />
-                    Score Moyen
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold">{engagementStats.averageScore}%</div>
-                  <div className="text-green-100 text-sm">
-                    Meilleur: {engagementStats.bestScore}%
-                  </div>
-                  <Progress value={engagementStats.averageScore} className="mt-2 h-2" />
-                </CardContent>
-              </Card>
-              
-              <Card className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white">
-                <CardHeader className="pb-2">
-                  <CardTitle className="flex items-center text-white">
-                    <Trophy className="h-5 w-5 mr-2" />
-                    Scores Parfaits
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold">{engagementStats.perfectScores}</div>
-                  <div className="text-yellow-100 text-sm">
-                    {engagementStats.totalQuizzesTaken > 0 ? 
-                      Math.round((engagementStats.perfectScores / engagementStats.totalQuizzesTaken) * 100) : 0
-                    }% de réussite
-                  </div>
-                  <div className="flex items-center mt-2">
-                    <Star className="h-3 w-3 mr-1" />
-                    <span className="text-yellow-100 text-xs">
-                      {engagementStats.perfectScores} / {engagementStats.totalQuizzesTaken}
-                    </span>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card className="bg-gradient-to-r from-purple-500 to-purple-600 text-white">
-                <CardHeader className="pb-2">
-                  <CardTitle className="flex items-center text-white">
-                    <Clock className="h-5 w-5 mr-2" />
-                    Cette Semaine
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold">{engagementStats.thisWeekQuizzes}</div>
-                  <div className="text-purple-100 text-sm">nouveaux quiz</div>
-                  <div className="text-purple-100 text-xs mt-1">
-                    {engagementStats.totalQuizzesTaken > 0 ? 
-                      `${((engagementStats.thisWeekQuizzes / engagementStats.totalQuizzesTaken) * 100).toFixed(1)}% du total` : 
-                      'Commence dès maintenant !'
-                    }
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Progress Overview */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Trophy className="h-5 w-5 mr-2" />
-                    Performances
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">Score moyen</span>
-                    <span className="text-sm text-gray-600">{engagementStats.averageScore}%</span>
-                  </div>
-                  <Progress value={engagementStats.averageScore} className="h-2" />
-                  
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">Meilleur score</span>
-                    <span className="text-sm text-gray-600">{engagementStats.bestScore}%</span>
-                  </div>
-                  <Progress value={engagementStats.bestScore} className="h-2" />
-                  
-                  <div className="grid grid-cols-2 gap-4 mt-4">
-                    <div className="text-center p-3 bg-blue-50 rounded-lg">
-                      <div className="text-lg font-bold text-blue-600">{engagementStats.totalQuizzesTaken}</div>
-                      <div className="text-xs text-blue-500">Quiz Terminés</div>
-                    </div>
-                    <div className="text-center p-3 bg-yellow-50 rounded-lg">
-                      <div className="text-lg font-bold text-yellow-600">{engagementStats.perfectScores}</div>
-                      <div className="text-xs text-yellow-500">Scores Parfaits</div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
             
             {/* Quick Actions */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -438,7 +300,7 @@ export function StudentDashboard() {
               </Card>
             </div>
           </TabsContent>
-
+          
           <TabsContent value="browse">
             <div className="space-y-6">
               <h2 className="text-2xl font-bold">Quiz Self-Service</h2>

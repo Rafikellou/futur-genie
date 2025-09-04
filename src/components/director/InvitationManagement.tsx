@@ -17,6 +17,7 @@ interface InvitationLink {
   id: string
   school_id: string
   classroom_id: string | null
+  intended_role: 'TEACHER' | 'PARENT' | 'DIRECTOR'
   token: string
   expires_at: string
   used_at: string | null
@@ -43,7 +44,7 @@ interface Classroom {
 }
 
 interface CreateInvitationData {
-  userType: 'TEACHER' | 'PARENT' | 'STUDENT'
+  userType: 'TEACHER' | 'PARENT'
   classroomId: string
   expiresInDays: number
   customMessage: string
@@ -105,6 +106,12 @@ export function InvitationManagement() {
     e.preventDefault()
     if (!profile?.id || !profile?.school_id) return
 
+    // Validation: classroom_id is required for all invitation types
+    if (!formData.classroomId) {
+      setError('Veuillez sélectionner une classe')
+      return
+    }
+
     setSaving(true)
     setError(null)
 
@@ -114,7 +121,8 @@ export function InvitationManagement() {
 
       await createInvitationLink({
         school_id: profile.school_id,
-        classroom_id: formData.classroomId || null,
+        classroom_id: formData.classroomId,
+        intended_role: formData.userType,
         token,
         expires_at: expiresAt,
         created_by: profile.id
@@ -152,9 +160,13 @@ export function InvitationManagement() {
   }
 
   const getInvitationRole = (invitation: InvitationLink) => {
-    // Determine role based on classroom assignment
+    // Use the stored intended_role from the invitation with fallback
+    if (invitation.intended_role) {
+      return invitation.intended_role.toLowerCase()
+    }
+    // Fallback to old logic for existing invitations without intended_role
     if (!invitation.classroom_id) return 'teacher'
-    return 'parent' // Default for classroom-specific invitations
+    return 'parent'
   }
 
   const getInvitationUrl = (invitation: InvitationLink) => {
@@ -247,7 +259,7 @@ L'équipe pédagogique`
                 <Label>Type d'utilisateur</Label>
                 <Select 
                   value={formData.userType} 
-                  onValueChange={(value: 'TEACHER' | 'PARENT' | 'STUDENT') => 
+                  onValueChange={(value: 'TEACHER' | 'PARENT') => 
                     setFormData(prev => ({ ...prev, userType: value }))
                   }
                 >
@@ -257,34 +269,33 @@ L'équipe pédagogique`
                   <SelectContent>
                     <SelectItem value="TEACHER">Enseignant</SelectItem>
                     <SelectItem value="PARENT">Parent</SelectItem>
-                    <SelectItem value="STUDENT">Élève</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               
-              {(formData.userType === 'PARENT' || formData.userType === 'STUDENT') && (
-                <div className="space-y-2">
-                  <Label>Classe (optionnel)</Label>
-                  <Select 
-                    value={formData.classroomId || 'none'}
-                    onValueChange={(value) => 
-                      setFormData(prev => ({ ...prev, classroomId: value === 'none' ? '' : value }))
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Sélectionner une classe" />
-                    </SelectTrigger>
-                    <SelectContent>
+              <div className="space-y-2">
+                <Label>Classe {formData.userType === 'TEACHER' ? '(obligatoire)' : '(optionnel)'}</Label>
+                <Select 
+                  value={formData.classroomId || 'none'}
+                  onValueChange={(value) => 
+                    setFormData(prev => ({ ...prev, classroomId: value === 'none' ? '' : value }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sélectionner une classe" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {formData.userType !== 'TEACHER' && (
                       <SelectItem value="none">Aucune classe spécifique</SelectItem>
-                      {classrooms.map(classroom => (
-                        <SelectItem key={classroom.id} value={classroom.id}>
-                          {classroom.name} ({classroom.grade})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
+                    )}
+                    {classrooms.map(classroom => (
+                      <SelectItem key={classroom.id} value={classroom.id}>
+                        {classroom.name} ({classroom.grade})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               
               <div className="space-y-2">
                 <Label>Expiration</Label>

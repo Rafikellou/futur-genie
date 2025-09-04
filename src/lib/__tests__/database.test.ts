@@ -1,4 +1,29 @@
-import { 
+// Mock Supabase client first to avoid hoisting issues
+const mockSupabaseClient = {
+  from: jest.fn().mockReturnThis(),
+  select: jest.fn().mockReturnThis(),
+  insert: jest.fn().mockReturnThis(),
+  update: jest.fn().mockReturnThis(),
+  delete: jest.fn().mockReturnThis(),
+  eq: jest.fn().mockReturnThis(),
+  is: jest.fn().mockReturnThis(),
+  order: jest.fn().mockReturnThis(),
+  single: jest.fn().mockResolvedValue({ data: null, error: null }),
+  auth: {
+    getSession: jest.fn(),
+    getUser: jest.fn(),
+    signInWithPassword: jest.fn(),
+    signUp: jest.fn(),
+    signOut: jest.fn(),
+    onAuthStateChange: jest.fn(),
+  },
+} as any
+
+jest.mock('@supabase/supabase-js', () => ({
+  createClient: jest.fn(() => mockSupabaseClient),
+}))
+
+import {
   createUser,
   getUserById,
   createClassroom,
@@ -7,73 +32,7 @@ import {
   getQuizzesByLevel,
   getSchoolStatistics,
   getTeacherEngagementStats,
-  getStudentEngagementStats,
-  getParentChildrenStats
 } from '../database'
-
-// Mock Supabase client
-const mockSupabaseClient = {
-  from: jest.fn(() => ({
-    insert: jest.fn(() => ({
-      select: jest.fn(() => ({
-        single: jest.fn(() => ({
-          data: null,
-          error: null
-        }))
-      }))
-    })),
-    select: jest.fn(() => ({
-      eq: jest.fn(() => ({
-        eq: jest.fn(() => ({
-          is: jest.fn(() => ({
-            is: jest.fn(() => ({
-              order: jest.fn(() => ({
-                data: [],
-                error: null
-              }))
-            }))
-          })),
-          order: jest.fn(() => ({
-            data: [],
-            error: null
-          })),
-          single: jest.fn(() => ({
-            data: null,
-            error: null
-          }))
-        })),
-        single: jest.fn(() => ({
-          data: null,
-          error: null
-        })),
-        order: jest.fn(() => ({
-          data: [],
-          error: null
-        }))
-      }))
-    })),
-    update: jest.fn(() => ({
-      eq: jest.fn(() => ({
-        select: jest.fn(() => ({
-          single: jest.fn(() => ({
-            data: null,
-            error: null
-          }))
-        }))
-      }))
-    })),
-    delete: jest.fn(() => ({
-      eq: jest.fn(() => ({
-        data: null,
-        error: null
-      }))
-    }))
-  }))
-}
-
-jest.mock('@/lib/supabase', () => ({
-  supabase: mockSupabaseClient
-}))
 
 describe('Database Functions', () => {
   beforeEach(() => {
@@ -85,23 +44,14 @@ describe('Database Functions', () => {
       it('should create a new user successfully', async () => {
         const mockUser = {
           id: 'user-123',
-          role: 'TEACHER',
+          role: 'TEACHER' as const,
           school_id: 'school-123',
           email: 'teacher@test.com',
           full_name: 'John Doe'
         }
 
-        // Mock the supabase response
-        mockSupabaseClient.from.mockReturnValue({
-          insert: jest.fn(() => ({
-            select: jest.fn(() => ({
-              single: jest.fn(() => ({
-                data: mockUser,
-                error: null
-              }))
-            }))
-          }))
-        })
+        // Mock the final result of the chain
+        mockSupabaseClient.single.mockResolvedValueOnce({ data: mockUser, error: null });
 
         const result = await createUser(mockUser)
         expect(result).toEqual(mockUser)
@@ -110,22 +60,11 @@ describe('Database Functions', () => {
       it('should handle user creation error', async () => {
         const mockError = new Error('Database error')
         
-        require('@supabase/supabase-js').createClient.mockReturnValue({
-          from: jest.fn(() => ({
-            insert: jest.fn(() => ({
-              select: jest.fn(() => ({
-                single: jest.fn(() => ({
-                  data: null,
-                  error: mockError
-                }))
-              }))
-            }))
-          }))
-        })
+        mockSupabaseClient.single.mockResolvedValueOnce({ data: null, error: mockError });
 
         const userData = {
           id: 'user-123',
-          role: 'TEACHER',
+          role: 'TEACHER' as const,
           school_id: 'school-123',
           email: 'teacher@test.com',
           full_name: 'John Doe'
@@ -144,18 +83,7 @@ describe('Database Functions', () => {
           full_name: 'John Doe'
         }
 
-        require('@supabase/supabase-js').createClient.mockReturnValue({
-          from: jest.fn(() => ({
-            select: jest.fn(() => ({
-              eq: jest.fn(() => ({
-                single: jest.fn(() => ({
-                  data: mockUser,
-                  error: null
-                }))
-              }))
-            }))
-          }))
-        })
+        mockSupabaseClient.single.mockResolvedValueOnce({ data: mockUser, error: null });
 
         const result = await getUserById('user-123')
         expect(result).toEqual(mockUser)
@@ -164,18 +92,7 @@ describe('Database Functions', () => {
       it('should handle user not found', async () => {
         const mockError = new Error('User not found')
         
-        require('@supabase/supabase-js').createClient.mockReturnValue({
-          from: jest.fn(() => ({
-            select: jest.fn(() => ({
-              eq: jest.fn(() => ({
-                single: jest.fn(() => ({
-                  data: null,
-                  error: mockError
-                }))
-              }))
-            }))
-          }))
-        })
+        mockSupabaseClient.single.mockResolvedValueOnce({ data: null, error: mockError });
 
         await expect(getUserById('nonexistent-user')).rejects.toThrow('User not found')
       })
@@ -188,29 +105,16 @@ describe('Database Functions', () => {
         const mockClassroom = {
           id: 'classroom-123',
           name: 'CM1 A',
-          grade: 'CM1',
+          grade: 'CM1' as const,
           school_id: 'school-123',
-          teacher_id: 'teacher-123'
         }
 
-        require('@supabase/supabase-js').createClient.mockReturnValue({
-          from: jest.fn(() => ({
-            insert: jest.fn(() => ({
-              select: jest.fn(() => ({
-                single: jest.fn(() => ({
-                  data: mockClassroom,
-                  error: null
-                }))
-              }))
-            }))
-          }))
-        })
+        mockSupabaseClient.single.mockResolvedValueOnce({ data: mockClassroom, error: null });
 
         const classroomData = {
           name: 'CM1 A',
-          grade: 'CM1',
+          grade: 'CM1' as const,
           school_id: 'school-123',
-          teacher_id: 'teacher-123'
         }
 
         const result = await createClassroom(classroomData)
@@ -235,18 +139,7 @@ describe('Database Functions', () => {
           }
         ]
 
-        require('@supabase/supabase-js').createClient.mockReturnValue({
-          from: jest.fn(() => ({
-            select: jest.fn(() => ({
-              eq: jest.fn(() => ({
-                order: jest.fn(() => ({
-                  data: mockClassrooms,
-                  error: null
-                }))
-              }))
-            }))
-          }))
-        })
+        mockSupabaseClient.order.mockResolvedValueOnce({ data: mockClassrooms, error: null });
 
         const result = await getClassroomsBySchool('school-123')
         expect(result).toEqual(mockClassrooms)
@@ -268,25 +161,15 @@ describe('Database Functions', () => {
           is_published: false
         }
 
-        require('@supabase/supabase-js').createClient.mockReturnValue({
-          from: jest.fn(() => ({
-            insert: jest.fn(() => ({
-              select: jest.fn(() => ({
-                single: jest.fn(() => ({
-                  data: mockQuiz,
-                  error: null
-                }))
-              }))
-            }))
-          }))
-        })
+        mockSupabaseClient.single.mockResolvedValueOnce({ data: mockQuiz, error: null });
 
         const quizData = {
           title: 'Math Quiz',
           description: 'Basic math quiz',
-          level: 'CM1',
+          level: 'CM1' as const,
           owner_id: 'teacher-123',
-          classroom_id: 'classroom-123'
+          classroom_id: 'classroom-123',
+          school_id: 'school-123'
         }
 
         const result = await createQuiz(quizData)
@@ -311,24 +194,7 @@ describe('Database Functions', () => {
           }
         ]
 
-        require('@supabase/supabase-js').createClient.mockReturnValue({
-          from: jest.fn(() => ({
-            select: jest.fn(() => ({
-              eq: jest.fn(() => ({
-                eq: jest.fn(() => ({
-                  is: jest.fn(() => ({
-                    is: jest.fn(() => ({
-                      order: jest.fn(() => ({
-                        data: mockQuizzes,
-                        error: null
-                      }))
-                    }))
-                  }))
-                }))
-              }))
-            }))
-          }))
-        })
+        mockSupabaseClient.order.mockResolvedValueOnce({ data: mockQuizzes, error: null });
 
         const result = await getQuizzesByLevel('CM1')
         expect(result).toEqual(mockQuizzes)
@@ -343,7 +209,7 @@ describe('Database Functions', () => {
         // Mock multiple function calls
         const mockUsers = [
           { id: 'user-1', role: 'TEACHER' },
-          { id: 'user-2', role: 'STUDENT' },
+          { id: 'user-2', role: 'PARENT' },
           { id: 'user-3', role: 'PARENT' }
         ]
         
@@ -352,27 +218,15 @@ describe('Database Functions', () => {
           { id: 'classroom-2', name: 'CM2 B' }
         ]
 
-        // Mock getUsersBySchool and getClassroomsBySchool
-        const getUsersBySchool = jest.fn().mockResolvedValue(mockUsers)
-        const getClassroomsBySchool = jest.fn().mockResolvedValue(mockClassrooms)
-
-        require('@supabase/supabase-js').createClient.mockReturnValue({
-          from: jest.fn(() => ({
-            select: jest.fn(() => ({
-              eq: jest.fn(() => ({
-                data: [],
-                error: null
-              }))
-            }))
-          }))
-        })
+        // These tests are simplified and don't fully mock the implementation
+        mockSupabaseClient.eq.mockResolvedValue({ data: [], error: null });
 
         // We would need to mock the actual function implementation
         // This is a simplified test structure
         const mockStats = {
           totalUsers: 3,
           totalTeachers: 1,
-          totalStudents: 1,
+          totalStudents: 0,
           totalParents: 1,
           totalClasses: 2
         }
@@ -393,17 +247,8 @@ describe('Database Functions', () => {
           thisWeekSubmissions: 8
         }
 
-        // Mock the database calls
-        require('@supabase/supabase-js').createClient.mockReturnValue({
-          from: jest.fn(() => ({
-            select: jest.fn(() => ({
-              eq: jest.fn(() => ({
-                data: [],
-                error: null
-              }))
-            }))
-          }))
-        })
+        // This test is simplified and doesn't fully mock the implementation
+        mockSupabaseClient.eq.mockResolvedValue({ data: [], error: null });
 
         // In a real test, we'd validate the actual function implementation
         expect(mockStats.totalQuizzes).toBe(5)
@@ -412,87 +257,19 @@ describe('Database Functions', () => {
       })
     })
 
-    describe('getStudentEngagementStats', () => {
-      it('should calculate student engagement statistics', async () => {
-        const mockStats = {
-          totalQuizzesTaken: 10,
-          averageScore: 75,
-          thisWeekQuizzes: 3,
-          perfectScores: 2,
-          bestScore: 95
-        }
-
-        require('@supabase/supabase-js').createClient.mockReturnValue({
-          from: jest.fn(() => ({
-            select: jest.fn(() => ({
-              eq: jest.fn(() => ({
-                data: [],
-                error: null
-              }))
-            }))
-          }))
-        })
-
-        expect(mockStats.totalQuizzesTaken).toBe(10)
-        expect(mockStats.averageScore).toBe(75)
-        expect(mockStats.perfectScores).toBe(2)
-      })
-    })
-
-    describe('getParentChildrenStats', () => {
-      it('should calculate parent children statistics', async () => {
-        const mockStats = {
-          totalChildren: 2,
-          totalQuizzesTaken: 20,
-          averageScore: 80,
-          thisWeekActivity: 5,
-          perfectScores: 4
-        }
-
-        require('@supabase/supabase-js').createClient.mockReturnValue({
-          from: jest.fn(() => ({
-            select: jest.fn(() => ({
-              eq: jest.fn(() => ({
-                data: [],
-                error: null
-              }))
-            }))
-          }))
-        })
-
-        expect(mockStats.totalChildren).toBe(2)
-        expect(mockStats.totalQuizzesTaken).toBe(20)
-        expect(mockStats.averageScore).toBe(80)
-      })
-    })
   })
 
   describe('Error Handling', () => {
     it('should handle network errors gracefully', async () => {
       const networkError = new Error('Network error')
       
-      require('@supabase/supabase-js').createClient.mockReturnValue({
-        from: jest.fn(() => {
-          throw networkError
-        })
-      })
+      mockSupabaseClient.from.mockImplementationOnce(() => { throw networkError; });
 
       await expect(getUserById('user-123')).rejects.toThrow('Network error')
     })
 
     it('should handle invalid data gracefully', async () => {
-      require('@supabase/supabase-js').createClient.mockReturnValue({
-        from: jest.fn(() => ({
-          select: jest.fn(() => ({
-            eq: jest.fn(() => ({
-              single: jest.fn(() => ({
-                data: null,
-                error: { message: 'Invalid data format' }
-              }))
-            }))
-          }))
-        }))
-      })
+      mockSupabaseClient.single.mockResolvedValueOnce({ data: null, error: { message: 'Invalid data format' } });
 
       await expect(getUserById('invalid-id')).rejects.toThrow()
     })

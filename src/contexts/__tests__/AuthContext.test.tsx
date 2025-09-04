@@ -1,8 +1,7 @@
 import React from 'react'
 import { render, screen, waitFor, act } from '@testing-library/react'
-import { AuthProvider, useAuth } from '../AuthContext'
 
-// Mock Supabase
+// Mock Supabase client first to avoid hoisting issues
 const mockSupabaseClient = {
   auth: {
     getSession: jest.fn(),
@@ -12,21 +11,20 @@ const mockSupabaseClient = {
     signOut: jest.fn(),
     onAuthStateChange: jest.fn(),
   },
-  from: jest.fn(() => ({
-    select: jest.fn(() => ({
-      eq: jest.fn(() => ({
-        single: jest.fn(() => ({
-          data: null,
-          error: null,
-        })),
+  from: jest.fn().mockImplementation(() => ({
+    select: jest.fn().mockImplementation(() => ({
+      eq: jest.fn().mockImplementation(() => ({
+        single: jest.fn(),
       })),
     })),
   })),
-}
+} as any
 
 jest.mock('@/lib/supabase', () => ({
   supabase: mockSupabaseClient,
 }))
+
+import { AuthProvider, useAuth } from '../AuthContext'
 
 // Test component that uses the auth context
 const TestComponent = () => {
@@ -274,14 +272,14 @@ describe('AuthContext', () => {
       email: 'test@example.com',
     }
 
-    let authStateChangeCallback: Function
+    let authStateChangeCallback: (event: string, session: any) => void
 
     mockSupabaseClient.auth.getSession.mockResolvedValue({
       data: { session: null },
       error: null,
     })
 
-    mockSupabaseClient.auth.onAuthStateChange.mockImplementation((callback) => {
+    mockSupabaseClient.auth.onAuthStateChange.mockImplementation((callback: (event: string, session: any) => void) => {
       authStateChangeCallback = callback
       return {
         data: { subscription: { unsubscribe: jest.fn() } },

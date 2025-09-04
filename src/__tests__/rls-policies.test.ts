@@ -12,7 +12,6 @@ const mockUserContext = {
 let schools: any[] = [];
 let classrooms: any[] = [];
 let users: any[] = [];
-let children: any[] = [];
 let quizzes: any[] = [];
 let submissions: any[] = [];
 
@@ -45,23 +44,21 @@ describe('New RLS Policy Tests', () => {
     ];
     users = [
       { id: 'director-1', role: 'DIRECTOR', school_id: 'school-1' },
+      { id: 'director-2', role: 'DIRECTOR', school_id: 'school-2' },
       { id: 'teacher-1', role: 'TEACHER', school_id: 'school-1', classroom_id: 'class-1' },
-      { id: 'teacher-2', role: 'TEACHER', school_id: 'school-2', classroom_id: 'class-3' },
-      { id: 'parent-1', role: 'PARENT', school_id: 'school-1' },
-      { id: 'parent-2', role: 'PARENT', school_id: 'school-2' },
-    ];
-    children = [
-      { id: 'child-1', parent_id: 'parent-1', classroom_id: 'class-1', full_name: 'Enfant Un' },
-      { id: 'child-2', parent_id: 'parent-2', classroom_id: 'class-3', full_name: 'Enfant Deux' },
+      { id: 'teacher-2', role: 'TEACHER', school_id: 'school-1', classroom_id: 'class-2' },
+      { id: 'teacher-3', role: 'TEACHER', school_id: 'school-2', classroom_id: 'class-3' },
+      { id: 'parent-1', role: 'PARENT', school_id: 'school-1', classroom_id: 'class-1' },
+      { id: 'parent-2', role: 'PARENT', school_id: 'school-2', classroom_id: 'class-3' },
     ];
     quizzes = [
       { id: 'quiz-1', classroom_id: 'class-1', is_published: true, title: 'Quiz CP' },
-      { id: 'quiz-2', classroom_id: 'class-1', is_published: false, title: 'Quiz CP (Brouillon)' },
+      { id: 'quiz-2', classroom_id: 'class-1', is_published: false, title: 'Quiz CE1 Non Publié' },
       { id: 'quiz-3', classroom_id: 'class-3', is_published: true, title: 'Quiz CP École B' },
     ];
     submissions = [
-      { id: 'sub-1', quiz_id: 'quiz-1', child_id: 'child-1', parent_id: 'parent-1' },
-      { id: 'sub-2', quiz_id: 'quiz-3', child_id: 'child-2', parent_id: 'parent-2' },
+      { id: 'sub-1', quiz_id: 'quiz-1', parent_id: 'parent-1' },
+      { id: 'sub-2', quiz_id: 'quiz-3', parent_id: 'parent-2' },
     ];
   });
 
@@ -76,14 +73,12 @@ describe('New RLS Policy Tests', () => {
       expect(can('select', classrooms[2], accessibleClassrooms)).toBe(false); // From another school
     });
 
-    it('should see all users, children, quizzes, and submissions in their school', () => {
+    it('should see all users, quizzes, and submissions in their school', () => {
       const accessibleUsers = users.filter(u => u.school_id === mockUserContext.school_id);
-      const accessibleChildren = children.filter(c => c.classroom_id.startsWith('class-1') || c.classroom_id.startsWith('class-2'));
       const accessibleQuizzes = quizzes.filter(q => q.classroom_id.startsWith('class-1') || q.classroom_id.startsWith('class-2'));
-      const accessibleSubmissions = submissions.filter(s => s.quiz_id === 'quiz-1');
+      const accessibleSubmissions = submissions.filter(s => s.parent_id === 'parent-1');
 
-      expect(accessibleUsers.length).toBe(3);
-      expect(accessibleChildren.length).toBe(1);
+      expect(accessibleUsers.length).toBe(4); // director-1, teacher-1, teacher-2, parent-1
       expect(accessibleQuizzes.length).toBe(2);
       expect(accessibleSubmissions.length).toBe(1);
     });
@@ -100,13 +95,11 @@ describe('New RLS Policy Tests', () => {
       expect(can('select', classrooms[1], accessibleClassrooms)).toBe(false); // Another class, same school
     });
 
-    it('should manage children and quizzes only for their classroom', () => {
-      const accessibleChildren = children.filter(c => c.classroom_id === mockUserContext.classroom_id);
+    it('should manage quizzes only for their classroom', () => {
       const accessibleQuizzes = quizzes.filter(q => q.classroom_id === mockUserContext.classroom_id);
       
-      expect(accessibleChildren.length).toBe(1);
       expect(accessibleQuizzes.length).toBe(2);
-      expect(can('select', children[1], accessibleChildren)).toBe(false); // Child from another class
+      expect(can('select', quizzes[2], accessibleQuizzes)).toBe(false); // Quiz from another class
     });
 
     it('should see submissions for their classroom quizzes', () => {
@@ -118,34 +111,27 @@ describe('New RLS Policy Tests', () => {
 
   // --- PARENT TESTS ---
   describe('As a Parent', () => {
-    beforeEach(() => setContext('parent-1', 'PARENT', 'school-1'));
+    beforeEach(() => setContext('parent-1', 'PARENT', 'school-1', 'class-1'));
 
-    it('should only manage their own children', () => {
-      const accessibleChildren = children.filter(c => c.parent_id === mockUserContext.id);
-      expect(accessibleChildren.length).toBe(1);
-      expect(can('select', children[0], accessibleChildren)).toBe(true);
-      expect(can('select', children[1], accessibleChildren)).toBe(false); // Another parent's child
-    });
-
-    it('should see their child classroom', () => {
-        const childClassIds = children.filter(c => c.parent_id === mockUserContext.id).map(c => c.classroom_id);
-        const accessibleClassrooms = classrooms.filter(c => childClassIds.includes(c.id));
+    it('should see their own classroom', () => {
+        const parentUser = users.find(u => u.id === mockUserContext.id);
+        const accessibleClassrooms = classrooms.filter(c => c.id === parentUser.classroom_id);
         expect(accessibleClassrooms.length).toBe(1);
         expect(accessibleClassrooms[0].id).toBe('class-1');
     });
 
-    it('should only see published quizzes for their child classroom', () => {
-        const childClassIds = children.filter(c => c.parent_id === mockUserContext.id).map(c => c.classroom_id);
-        const accessibleQuizzes = quizzes.filter(q => childClassIds.includes(q.classroom_id) && q.is_published);
+    it('should only see published quizzes for their classroom', () => {
+        const parentUser = users.find(u => u.id === mockUserContext.id);
+        const accessibleQuizzes = quizzes.filter(q => q.classroom_id === parentUser.classroom_id && q.is_published);
         expect(accessibleQuizzes.length).toBe(1);
         expect(accessibleQuizzes[0].id).toBe('quiz-1'); // Sees published quiz
     });
 
-    it('should only create/see submissions for their own child', () => {
+    it('should only create/see their own submissions', () => {
         const accessibleSubmissions = submissions.filter(s => s.parent_id === mockUserContext.id);
         expect(accessibleSubmissions.length).toBe(1);
         expect(can('select', submissions[0], accessibleSubmissions)).toBe(true);
-        expect(can('select', submissions[1], accessibleSubmissions)).toBe(false); // Submission from another parent
+        expect(can('select', submissions[1], accessibleSubmissions)).toBe(false); // Another parent's submission
     });
   });
 });

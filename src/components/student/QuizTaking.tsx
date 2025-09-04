@@ -18,9 +18,12 @@ import {
   RotateCcw,
   Timer,
   BookOpen,
-  Loader2
+  Loader2,
+  ShieldAlert
 } from 'lucide-react'
 import { getQuizWithItems, createSubmission } from '@/lib/database'
+import { handleSupabaseError } from '@/lib/error-handler'
+import { checkPermission } from '@/lib/permissions'
 
 interface QuizQuestion {
   id: string
@@ -58,7 +61,8 @@ interface QuizTakingProps {
 }
 
 export function QuizTaking({ quizId, onComplete, onExit }: QuizTakingProps) {
-  const { profile } = useAuth()
+  const { profile, claims } = useAuth()
+  const canSubmit = checkPermission(claims?.role ?? null, 'canSubmitQuiz')
   const [quiz, setQuiz] = useState<Quiz | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -104,7 +108,8 @@ export function QuizTaking({ quizId, onComplete, onExit }: QuizTakingProps) {
       } as Quiz)
       
     } catch (error: any) {
-      setError(error.message || 'Erreur lors du chargement du quiz')
+      handleSupabaseError(error)
+      setError('Erreur lors du chargement du quiz')
     } finally {
       setLoading(false)
     }
@@ -184,12 +189,18 @@ export function QuizTaking({ quizId, onComplete, onExit }: QuizTakingProps) {
       })
 
       // Create submission
+      if (!claims?.schoolId || !claims?.classroomId) {
+        throw new Error('Informations de classe et d\'école non trouvées.')
+      }
+
       await createSubmission({
         quiz_id: quizId,
-        student_id: profile.id,
+        parent_id: profile.id,
         answers: submissionAnswers,
         score,
-        total_questions: total
+        total_questions: total,
+        school_id: claims.schoolId,
+        classroom_id: claims.classroomId,
       })
 
       setFinalScore({ score, total })
@@ -197,7 +208,8 @@ export function QuizTaking({ quizId, onComplete, onExit }: QuizTakingProps) {
       onComplete(score, total)
 
     } catch (error: any) {
-      setError(error.message || 'Erreur lors de la soumission')
+      handleSupabaseError(error)
+      setError('Erreur lors de la soumission')
     } finally {
       setIsSubmitting(false)
     }
@@ -223,6 +235,26 @@ export function QuizTaking({ quizId, onComplete, onExit }: QuizTakingProps) {
     if (percentage >= 70) return 'Bien joué ! 👍'
     if (percentage >= 60) return 'Pas mal ! 😊'
     return 'Continue à t\'entraîner ! 💪'
+  }
+
+  if (!canSubmit) {
+    return (
+      <Card className="max-w-2xl mx-auto p-8">
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <ShieldAlert className="h-5 w-5 mr-2 text-red-500" />
+            Accès non autorisé
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p>Vous n'avez pas les permissions nécessaires pour passer ce quiz.</p>
+          <Button onClick={onExit} className="mt-4">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Retour
+          </Button>
+        </CardContent>
+      </Card>
+    )
   }
 
   if (loading) {

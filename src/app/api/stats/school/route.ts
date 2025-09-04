@@ -47,13 +47,12 @@ export async function POST(req: NextRequest) {
     }
 
     const teachers = (users ?? []).filter(u => u.role === 'TEACHER')
-    const students = (users ?? []).filter(u => u.role === 'STUDENT')
     const parents = (users ?? []).filter(u => u.role === 'PARENT')
 
     return NextResponse.json({
       totalUsers: users?.length || 0,
       totalTeachers: teachers.length,
-      totalStudents: students.length,
+      totalStudents: parents.length, // Each parent represents one student
       totalParents: parents.length,
       totalClasses: classrooms?.length || 0,
       totalQuizzes: quizzes?.length || 0,

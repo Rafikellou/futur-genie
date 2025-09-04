@@ -11,9 +11,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { Bot, Send, User, Sparkles, CheckCircle, XCircle, RefreshCw, Save, Loader2, MessageSquare, Edit, Trash2 } from 'lucide-react'
+import { Bot, Send, User, Sparkles, CheckCircle, XCircle, RefreshCw, Save, Loader2, MessageSquare, Edit, Trash2, ShieldAlert } from 'lucide-react'
 import { getClassroomsByTeacher, createQuiz, createQuizItem } from '@/lib/database'
 import { GeneratedQuiz, QuizQuestion } from '@/lib/openai'
+import { checkPermission } from '@/lib/permissions'
+import { handleSupabaseError } from '@/lib/error-handler'
 
 interface Classroom {
   id: string
@@ -39,7 +41,8 @@ interface QuizCreationData {
 }
 
 export function AIQuizCreator() {
-  const { profile } = useAuth()
+  const { profile, claims } = useAuth()
+  const canCreate = checkPermission(claims?.role ?? null, 'canCreateQuiz')
   const [classrooms, setClassrooms] = useState<Classroom[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -81,7 +84,7 @@ export function AIQuizCreator() {
       setClassrooms(data as Classroom[])
     } catch (error) {
       console.error('Error fetching classrooms:', error)
-      setError('Erreur lors du chargement des classes')
+      handleSupabaseError(error as any)
     }
   }
 
@@ -142,8 +145,8 @@ export function AIQuizCreator() {
       addMessage('assistant', `J'ai généré un quiz "${quiz.title}" avec 10 questions basées sur votre leçon. Vous pouvez maintenant réviser les questions, demander des modifications, ou sauvegarder le quiz directement.`)
       
     } catch (error: any) {
-      setError(error.message)
-      addMessage('assistant', `Désolé, une erreur s'est produite : ${error.message}. Veuillez réessayer.`)
+      handleSupabaseError(error as any)
+      addMessage('assistant', `Désolé, une erreur s'est produite. Veuillez réessayer.`)
     } finally {
       setIsGenerating(false)
     }
@@ -191,8 +194,8 @@ export function AIQuizCreator() {
       setImprovementFeedback('')
       
     } catch (error: any) {
-      setError(error.message)
-      addMessage('assistant', `Erreur lors de l'amélioration : ${error.message}`)
+      handleSupabaseError(error as any)
+      addMessage('assistant', `Erreur lors de l'amélioration. Veuillez réessayer.`)
     } finally {
       setIsImproving(false)
     }
@@ -218,6 +221,7 @@ export function AIQuizCreator() {
         level: classroom.grade as any,
         owner_id: profile?.id,
         classroom_id: selectedClassroom,
+        school_id: classroom.school_id,
         is_published: false
       }
       
@@ -227,6 +231,8 @@ export function AIQuizCreator() {
       for (let i = 0; i < generatedQuiz.questions.length; i++) {
         const question = generatedQuiz.questions[i]
         await createQuizItem({
+          school_id: classroom.school_id,
+          classroom_id: selectedClassroom,
           quiz_id: createdQuiz.id,
           question: question.question,
           choices: question.choices,
@@ -245,8 +251,8 @@ export function AIQuizCreator() {
       setSelectedClassroom('')
       
     } catch (error: any) {
-      setError(error.message)
-      addMessage('assistant', `Erreur lors de la sauvegarde : ${error.message}`)
+      handleSupabaseError(error as any)
+      addMessage('assistant', `Erreur lors de la sauvegarde. Veuillez réessayer.`)
     } finally {
       setIsSaving(false)
     }
@@ -267,6 +273,22 @@ export function AIQuizCreator() {
       hour: '2-digit', 
       minute: '2-digit' 
     })
+  }
+
+  if (!canCreate) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <ShieldAlert className="h-5 w-5 mr-2 text-red-500" />
+            Accès non autorisé
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p>Vous n'avez pas les permissions nécessaires pour créer un quiz.</p>
+        </CardContent>
+      </Card>
+    )
   }
 
   return (

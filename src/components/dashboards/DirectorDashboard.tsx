@@ -26,15 +26,13 @@ import { ClassroomManagement } from '@/components/director/ClassroomManagement'
 import { UserManagement } from '@/components/director/UserManagement'
 import { InvitationManagement } from '@/components/director/InvitationManagement'
 import { 
-  getUsersBySchool, 
-  getClassroomsBySchool, 
   getSchoolStatistics,
   getRecentActivity,
   getQuizEngagementStats
 } from '@/lib/database'
 
 export function DirectorDashboard() {
-  const { profile, signOut } = useAuth()
+  const { profile, claims, signOut } = useAuth()
   const [activeTab, setActiveTab] = useState('overview')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -59,25 +57,26 @@ export function DirectorDashboard() {
   const [recentActivity, setRecentActivity] = useState<any[]>([])
 
   useEffect(() => {
-    if (profile?.school_id) {
+    if (claims?.schoolId) {
       fetchAllStats()
       
       // Set up interval for real-time updates every 30 seconds
       const interval = setInterval(fetchAllStats, 30000)
       return () => clearInterval(interval)
     }
-  }, [profile?.school_id])
+  }, [claims?.schoolId])
 
   const fetchAllStats = async () => {
-    if (!profile?.school_id) return
+    const schoolId = claims?.schoolId
+    if (!schoolId) return
     
     try {
       setLoading(true)
       
       const [schoolStats, engagement, activity] = await Promise.all([
-        getSchoolStatistics(profile.school_id),
-        getQuizEngagementStats(profile.school_id),
-        getRecentActivity(profile.school_id, 8)
+        getSchoolStatistics(schoolId),
+        getQuizEngagementStats(schoolId),
+        getRecentActivity(schoolId, 8)
       ])
       
       setStats(schoolStats)
@@ -226,7 +225,7 @@ export function DirectorDashboard() {
                   <CardTitle className="flex items-center justify-between">
                     <div className="flex items-center">
                       <BookOpen className="h-5 w-5 mr-2" />
-                      Élèves
+                      Élèves (Parents)
                     </div>
                     <Calendar className="h-4 w-4 text-blue-500" />
                   </CardTitle>
@@ -376,7 +375,7 @@ export function DirectorDashboard() {
                       {recentActivity.slice(0, 5).map((activity: any, index: number) => (
                         <div key={index} className="flex justify-between items-center p-2 bg-gray-50 rounded">
                           <div>
-                            <div className="font-medium text-sm">{activity.student?.full_name}</div>
+                            <div className="font-medium text-sm">{activity.parent?.full_name}</div>
                             <div className="text-xs text-gray-500">{activity.quiz?.title}</div>
                           </div>
                           <div className="text-right">
@@ -416,7 +415,7 @@ export function DirectorDashboard() {
                       </div>
                     </Button>
                     <Button 
-                      onClick={() => setActiveTab('teachers')} 
+                      onClick={() => setActiveTab('users')} 
                       variant="outline" 
                       className="h-16 flex items-center justify-start space-x-3"
                     >

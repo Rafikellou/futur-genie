@@ -4,9 +4,9 @@ import { createClient } from '@supabase/supabase-js'
 export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => ({}))
-    const { school_id, classroom_id, token, expires_at, created_by } = body || {}
+    const { school_id, classroom_id, intended_role, token, expires_at, created_by } = body || {}
 
-    if (!school_id || !token || !expires_at || !created_by) {
+    if (!school_id || !classroom_id || !intended_role || !token || !expires_at || !created_by) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
@@ -23,11 +23,12 @@ export async function POST(req: Request) {
       .from('invitation_links')
       .insert({
         school_id,
-        classroom_id: classroom_id ?? null,
+        classroom_id,
+        intended_role,
         token,
         expires_at,
         created_by,
-      } as any)
+      })
 
     if (error) {
       return NextResponse.json({ error: error.message, code: error.code }, { status: 500 })

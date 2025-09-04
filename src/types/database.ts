@@ -13,7 +13,7 @@ export interface Database {
         Row: {
           id: string
           name: string
-          created_at?: string
+          created_at: string
         }
         Insert: {
           id?: string
@@ -29,24 +29,27 @@ export interface Database {
       users: {
         Row: {
           id: string
-          role: 'DIRECTOR' | 'TEACHER' | 'PARENT' | 'STUDENT'
+          role: 'DIRECTOR' | 'TEACHER' | 'PARENT'
           school_id: string | null
-          email?: string | null
-          full_name?: string | null
-          created_at?: string
+          classroom_id: string | null
+          email: string | null
+          full_name: string | null
+          created_at: string
         }
         Insert: {
           id: string
-          role: 'DIRECTOR' | 'TEACHER' | 'PARENT' | 'STUDENT'
+          role: 'DIRECTOR' | 'TEACHER' | 'PARENT'
           school_id?: string | null
+          classroom_id?: string | null
           email?: string | null
           full_name?: string | null
           created_at?: string
         }
         Update: {
           id?: string
-          role?: 'DIRECTOR' | 'TEACHER' | 'PARENT' | 'STUDENT'
+          role?: 'DIRECTOR' | 'TEACHER' | 'PARENT'
           school_id?: string | null
+          classroom_id?: string | null
           email?: string | null
           full_name?: string | null
           created_at?: string
@@ -56,45 +59,22 @@ export interface Database {
         Row: {
           id: string
           name: string
-          grade: string
+          grade: Database['public']['Enums']['grade_level']
           school_id: string
-          teacher_id: string | null
-          created_at?: string
+          created_at: string
         }
         Insert: {
           id?: string
           name: string
-          grade: string
+          grade: Database['public']['Enums']['grade_level']
           school_id: string
-          teacher_id?: string | null
           created_at?: string
         }
         Update: {
           id?: string
           name?: string
-          grade?: string
+          grade?: Database['public']['Enums']['grade_level']
           school_id?: string
-          teacher_id?: string | null
-          created_at?: string
-        }
-      }
-      students: {
-        Row: {
-          id: string
-          classroom_id: string | null
-          parent_id: string
-          created_at?: string
-        }
-        Insert: {
-          id: string
-          classroom_id?: string | null
-          parent_id: string
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          classroom_id?: string | null
-          parent_id?: string
           created_at?: string
         }
       }
@@ -103,19 +83,21 @@ export interface Database {
           id: string
           title: string
           description: string | null
-          level: string
+          level: Database['public']['Enums']['grade_level']
           owner_id: string | null
-          classroom_id: string | null
+          classroom_id: string
+          school_id: string
           is_published: boolean
-          created_at?: string
+          created_at: string
         }
         Insert: {
           id?: string
           title: string
           description?: string | null
-          level: string
+          level: Database['public']['Enums']['grade_level']
           owner_id?: string | null
-          classroom_id?: string | null
+          classroom_id: string
+          school_id: string
           is_published?: boolean
           created_at?: string
         }
@@ -123,9 +105,10 @@ export interface Database {
           id?: string
           title?: string
           description?: string | null
-          level?: string
+          level?: Database['public']['Enums']['grade_level']
           owner_id?: string | null
-          classroom_id?: string | null
+          classroom_id?: string
+          school_id?: string
           is_published?: boolean
           created_at?: string
         }
@@ -138,7 +121,9 @@ export interface Database {
           choices: Json
           answer_keys: string[]
           order_index: number
-          created_at?: string
+          school_id: string
+          classroom_id: string
+          created_at: string
         }
         Insert: {
           id?: string
@@ -147,6 +132,8 @@ export interface Database {
           choices: Json
           answer_keys: string[]
           order_index?: number
+          school_id: string
+          classroom_id: string
           created_at?: string
         }
         Update: {
@@ -156,6 +143,8 @@ export interface Database {
           choices?: Json
           answer_keys?: string[]
           order_index?: number
+          school_id?: string
+          classroom_id?: string
           created_at?: string
         }
       }
@@ -163,28 +152,34 @@ export interface Database {
         Row: {
           id: string
           quiz_id: string
-          student_id: string
+          parent_id: string
           answers: Json
           score: number
           total_questions: number
-          created_at?: string
+          school_id: string
+          classroom_id: string
+          created_at: string
         }
         Insert: {
           id?: string
           quiz_id: string
-          student_id: string
+          parent_id: string
           answers: Json
           score: number
           total_questions: number
+          school_id: string
+          classroom_id: string
           created_at?: string
         }
         Update: {
           id?: string
           quiz_id?: string
-          student_id?: string
+          parent_id?: string
           answers?: Json
           score?: number
           total_questions?: number
+          school_id?: string
+          classroom_id?: string
           created_at?: string
         }
       }
@@ -192,17 +187,19 @@ export interface Database {
         Row: {
           id: string
           school_id: string
-          classroom_id: string | null
+          classroom_id: string
+          intended_role: 'DIRECTOR' | 'TEACHER' | 'PARENT'
           token: string
           expires_at: string
           used_at: string | null
           created_by: string
-          created_at?: string
+          created_at: string
         }
         Insert: {
           id?: string
           school_id: string
-          classroom_id?: string | null
+          classroom_id: string
+          intended_role: 'DIRECTOR' | 'TEACHER' | 'PARENT'
           token: string
           expires_at: string
           used_at?: string | null
@@ -212,7 +209,8 @@ export interface Database {
         Update: {
           id?: string
           school_id?: string
-          classroom_id?: string | null
+          classroom_id?: string
+          intended_role?: 'DIRECTOR' | 'TEACHER' | 'PARENT'
           token?: string
           expires_at?: string
           used_at?: string | null
@@ -228,7 +226,7 @@ export interface Database {
       [_ in never]: never
     }
     Enums: {
-      user_role: 'DIRECTOR' | 'TEACHER' | 'PARENT' | 'STUDENT'
+      user_role: 'DIRECTOR' | 'TEACHER' | 'PARENT'
       grade_level: 'CP' | 'CE1' | 'CE2' | 'CM1' | 'CM2' | '6EME' | '5EME' | '4EME' | '3EME'
     }
     CompositeTypes: {
