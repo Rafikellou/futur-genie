@@ -86,7 +86,8 @@ export function TeacherSignup({ token, onBack }: TeacherSignupProps) {
         invitation_token: token
       })
       
-      // Success - user will be redirected automatically by auth context
+      // Force redirect to teacher dashboard after successful signup
+      window.location.href = '/dashboard'
     } catch (error: any) {
       setError(error.message || 'Une erreur est survenue lors de la création du compte')
     } finally {

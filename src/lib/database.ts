@@ -29,7 +29,7 @@ export async function getUserById(id: string): Promise<TablesRow<'users'>> {
   return data as TablesRow<'users'>
 }
 
-export async function getUsersBySchool(schoolId: string) {
+export async function getUsersBySchoolLegacy(schoolId: string) {
   const res = await fetch('/api/users/by-school', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -42,20 +42,15 @@ export async function getUsersBySchool(schoolId: string) {
     try {
       const parsed = JSON.parse(text)
       msg = parsed?.error || msg
-    } catch {}
+    } catch (e) {
+      // ignore parse error, use default msg
+    }
     throw new Error(msg)
   }
-  // Be resilient to unexpected shapes
-  const text = await res.text()
-  try {
-    const json = JSON.parse(text)
-    const items = Array.isArray(json?.items) ? json.items : (Array.isArray(json) ? json : [])
-    return items
-  } catch (e) {
-    console.error('users/by-school parse error. Raw response:', text)
-    return []
-  }
+  const { users } = await res.json()
+  return users
 }
+
 
 // School operations
 export async function createSchool(name: string): Promise<TablesRow<'schools'>> {
@@ -143,24 +138,26 @@ export async function deleteClassroom(id: string) {
 }
 
 export async function getClassroomsByTeacher(teacherId: string) {
-  // Teacher is linked via users.classroom_id in the new schema
-  const { data: user, error: userErr } = await supabase
-    .from('users')
-    .select('classroom_id')
-    .eq('id', teacherId)
-    .single()
+  const { data: session } = await supabase.auth.getSession()
+  if (!session.session?.access_token) {
+    throw new Error('No active session')
+  }
 
-  if (userErr) throw userErr
-  const u = (user as unknown) as { classroom_id: string | null }
-  if (!u?.classroom_id) return []
+  const res = await fetch('/api/teacher/classrooms', {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${session.session.access_token}`,
+      'Content-Type': 'application/json',
+    },
+  })
 
-  const { data, error } = await supabase
-    .from('classrooms')
-    .select('*')
-    .eq('id', u.classroom_id)
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err?.error || 'Failed to get classrooms')
+  }
 
-  if (error) throw error
-  return data
+  const { classrooms } = await res.json()
+  return classrooms
 }
 
 
@@ -190,16 +187,26 @@ export async function getQuizzesByLevel(level: string) {
 }
 
 export async function getQuizzesByTeacher(teacherId: string) {
-  const { data, error } = await supabase
-    .from('quizzes')
-    .select(`
-      *,
-      classroom:classrooms(id, name, grade)
-    `)
-    .eq('owner_id', teacherId)
+  const { data: session } = await supabase.auth.getSession()
+  if (!session.session?.access_token) {
+    throw new Error('No active session')
+  }
 
-  if (error) throw error
-  return data
+  const res = await fetch('/api/teacher/quizzes', {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${session.session.access_token}`,
+      'Content-Type': 'application/json',
+    },
+  })
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err?.error || 'Failed to get quizzes')
+  }
+
+  const { quizzes } = await res.json()
+  return quizzes
 }
 
 export async function getQuizzesByClassroom(classroomId: string) {
@@ -344,6 +351,29 @@ export async function getParentStats(parentId: string) {
 
 
 // Additional statistics functions for real-time dashboard data
+export async function getUsersBySchool(schoolId: string) {
+  const { data: session } = await supabase.auth.getSession()
+  if (!session.session?.access_token) {
+    throw new Error('No active session')
+  }
+
+  const res = await fetch('/api/teacher/students', {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${session.session.access_token}`,
+      'Content-Type': 'application/json',
+    },
+  })
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err?.error || 'Failed to get students')
+  }
+
+  const { students } = await res.json()
+  return students
+}
+
 export async function getSchoolStatistics(schoolId: string) {
   try {
     const res = await fetch('/api/stats/school', {
