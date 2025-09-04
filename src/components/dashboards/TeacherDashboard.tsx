@@ -127,23 +127,21 @@ export function TeacherDashboard() {
       setQuizzes(quizzesData as Quiz[])
       setEngagementStats(engagement)
       
-      // If teacher has a school, fetch all students for that school
-      if (profile.school_id) {
-        const allUsers = await getUsersBySchool(profile.school_id)
-        const studentUsers = allUsers.filter((user: User) => user.app_metadata.role === 'STUDENT')
-        
-        const studentsData = studentUsers.map((user: User) => ({
-          id: user.id,
-          classroom_id: user.user_metadata.classroom_id || null,
-          user: {
-            id: user.id,
-            full_name: user.user_metadata.full_name || null,
-            email: user.email || null,
-          },
-        }))
-        
-        setStudents(studentsData as Student[])
-      }
+      // Get students (parents) for teacher's classroom - they are returned directly from the API
+      const studentsData = await getUsersBySchool(profile.school_id || '')
+      
+      // Transform the data to match the expected Student interface
+      const transformedStudents = studentsData.map((parent: any) => ({
+        id: parent.id,
+        classroom_id: parent.classroom_id || null,
+        user: {
+          id: parent.id,
+          full_name: parent.full_name || parent.child_first_name || null,
+          email: parent.email || null,
+        },
+      }))
+      
+      setStudents(transformedStudents as Student[])
       
       setError(null)
     } catch (error: any) {

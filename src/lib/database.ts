@@ -439,54 +439,26 @@ export async function getQuizEngagementStats(schoolId: string) {
 
 
 export async function getTeacherEngagementStats(teacherId: string) {
-  try {
-    const [quizzes, submissions] = await Promise.all([
-      getQuizzesByTeacher(teacherId),
-      supabase
-        .from('submissions')
-        .select(`
-          *,
-          quiz:quizzes!inner(owner_id)
-        `)
-        .eq('quiz.owner_id', teacherId)
-    ])
-
-    // Type the submissions data properly
-    const submissionsData = submissions.data as Database['public']['Tables']['submissions']['Row'][] | null
-
-    // Type the quizzes data properly
-    const quizzesData = quizzes as (Database['public']['Tables']['quizzes']['Row'] & {
-      classroom: { id: string; name: string; grade: string } | null
-    })[] | null
-
-    const totalQuizzes = quizzesData?.length || 0
-    const publishedQuizzes = quizzesData?.filter(q => q.is_published).length || 0
-    const totalSubmissions = submissionsData?.length || 0
-    
-    // This week's activity
-    const weekAgo = new Date()
-    weekAgo.setDate(weekAgo.getDate() - 7)
-    const thisWeekSubmissions = submissionsData?.filter(sub => 
-      new Date(sub.created_at!) > weekAgo
-    ).length || 0
-
-    return {
-      totalQuizzes,
-      publishedQuizzes,
-      draftQuizzes: totalQuizzes - publishedQuizzes,
-      totalSubmissions,
-      thisWeekSubmissions
-    }
-  } catch (error) {
-    console.error('Error fetching teacher engagement stats:', error)
-    return {
-      totalQuizzes: 0,
-      publishedQuizzes: 0,
-      draftQuizzes: 0,
-      totalSubmissions: 0,
-      thisWeekSubmissions: 0
-    }
+  const { data: session } = await supabase.auth.getSession()
+  if (!session.session?.access_token) {
+    throw new Error('No active session')
   }
+
+  const res = await fetch('/api/teacher/engagement', {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${session.session.access_token}`,
+      'Content-Type': 'application/json',
+    },
+  })
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err?.error || 'Failed to get engagement stats')
+  }
+
+  const { stats } = await res.json()
+  return stats
 }
 
 export async function getSubmissionsByQuiz(quizId: string) {
