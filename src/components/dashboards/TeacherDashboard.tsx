@@ -83,7 +83,7 @@ interface Submission {
 
 export function TeacherDashboard() {
   const { profile, schoolName, signOut } = useAuth()
-  const [activeTab, setActiveTab] = useState('overview')
+  const [activeTab, setActiveTab] = useState('ai-quiz')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   
@@ -242,14 +242,11 @@ export function TeacherDashboard() {
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <div className="card-secondary p-1 rounded-xl">
-            <div className="grid grid-cols-7 gap-1">
-              <button className={`px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 ${activeTab === 'overview' ? 'gradient-accent text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-slate-700/50'}`} onClick={() => setActiveTab('overview')}>Vue d'ensemble</button>
-              <button className={`px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 ${activeTab === 'ai-quiz' ? 'gradient-accent text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-slate-700/50'}`} onClick={() => setActiveTab('ai-quiz')}>Assistant IA</button>
+            <div className="grid grid-cols-4 gap-1">
+              <button className={`px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 ${activeTab === 'ai-quiz' ? 'gradient-accent text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-slate-700/50'}`} onClick={() => setActiveTab('ai-quiz')}>Créer un Quiz</button>
               <button className={`px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 ${activeTab === 'quizzes' ? 'gradient-accent text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-slate-700/50'}`} onClick={() => setActiveTab('quizzes')}>Mes Quiz</button>
-              <button className={`px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 ${activeTab === 'invitations' ? 'gradient-accent text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-slate-700/50'}`} onClick={() => setActiveTab('invitations')}>Invitations</button>
-              <button className={`px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 ${activeTab === 'analytics' ? 'gradient-accent text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-slate-700/50'}`} onClick={() => setActiveTab('analytics')}>Analyses</button>
-              <button className={`px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 ${activeTab === 'classrooms' ? 'gradient-accent text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-slate-700/50'}`} onClick={() => setActiveTab('classrooms')}>Mes Classes</button>
               <button className={`px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 ${activeTab === 'results' ? 'gradient-accent text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-slate-700/50'}`} onClick={() => setActiveTab('results')}>Résultats</button>
+              <button className={`px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 ${activeTab === 'overview' ? 'gradient-accent text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-slate-700/50'}`} onClick={() => setActiveTab('overview')}>Analyse</button>
             </div>
           </div>
           
@@ -324,29 +321,85 @@ export function TeacherDashboard() {
               </div>
             </div>
 
+            {/* Mes Classes Section */}
+            <div className="card-dark p-6 rounded-xl">
+              <h3 className="text-xl font-semibold text-white mb-4 flex items-center">
+                <Users className="h-5 w-5 mr-2" />
+                Mes Classes
+              </h3>
+              {classrooms.length === 0 ? (
+                <div className="text-center py-8">
+                  <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <h4 className="text-lg font-medium text-gray-300 mb-2">Aucune classe assignée</h4>
+                  <p className="text-gray-400">Contactez votre directeur pour être assigné à une classe</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {classrooms.map((classroom) => {
+                    const classStudents = students.filter(s => s.classroom_id === classroom.id)
+                    return (
+                      <div key={classroom.id} className="card-secondary p-4 rounded-lg border border-slate-600">
+                        <div className="flex justify-between items-start mb-3">
+                          <h4 className="font-semibold text-white">{classroom.name}</h4>
+                          <Badge variant="outline" className="text-slate-300 border-slate-500">{classroom.grade}</Badge>
+                        </div>
+                        <div className="space-y-2">
+                          <div className="text-sm text-slate-300">Élèves: {classStudents.length}</div>
+                          {classStudents.length > 0 && (
+                            <div className="text-xs text-slate-400">
+                              {classStudents.slice(0, 3).map(s => s.user.full_name).join(', ')}
+                              {classStudents.length > 3 && ` et ${classStudents.length - 3} autres`}
+                            </div>
+                          )}
+                          <div className="flex space-x-2 mt-3">
+                            <Button size="sm" variant="outline" className="text-xs">
+                              Voir les élèves
+                            </Button>
+                            <Button size="sm" className="text-xs" onClick={() => setActiveTab('ai-quiz')}>
+                              Créer un quiz
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Invitations Section */}
+            <div className="card-dark p-6 rounded-xl">
+              <h3 className="text-xl font-semibold text-white mb-4 flex items-center">
+                <Send className="h-5 w-5 mr-2" />
+                Invitations Parents
+              </h3>
+              <ParentInvitationCard />
+            </div>
+
             {/* Quick Actions */}
             <div className="card-dark p-6 rounded-xl">
+              <h3 className="text-xl font-semibold text-white mb-4">Actions rapides</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <button 
                   onClick={() => setActiveTab('ai-quiz')}
                   className="h-20 flex flex-col items-center justify-center btn-gradient gradient-primary text-white rounded-lg font-medium transition-all duration-200 hover-lift"
                 >
                   <Bot className="h-6 w-6 mb-2" />
-                  Assistant IA
+                  Créer un Quiz IA
                 </button>
                 <button 
                   onClick={() => setActiveTab('quizzes')} 
                   className="h-20 flex flex-col items-center justify-center card-secondary border border-slate-600 text-slate-300 hover:text-white hover:bg-slate-700/50 rounded-lg font-medium transition-all duration-200"
                 >
-                  <Plus className="h-6 w-6 mb-2" />
-                  Créer un Quiz
+                  <FileText className="h-6 w-6 mb-2" />
+                  Mes Quiz
                 </button>
                 <button 
-                  onClick={() => setActiveTab('analytics')} 
+                  onClick={() => setActiveTab('results')} 
                   className="h-20 flex flex-col items-center justify-center card-secondary border border-slate-600 text-slate-300 hover:text-white hover:bg-slate-700/50 rounded-lg font-medium transition-all duration-200"
                 >
                   <BarChart3 className="h-6 w-6 mb-2" />
-                  Analyses
+                  Résultats
                 </button>
               </div>
             </div>
@@ -369,165 +422,191 @@ export function TeacherDashboard() {
             <AIQuizCreator />
           </TabsContent>
           
-          <TabsContent value="invitations" className="space-y-6">
-            <ParentInvitationCard />
-          </TabsContent>
-          
-          <TabsContent value="analytics">
-            <ProgressTracker />
-          </TabsContent>
           
           <TabsContent value="quizzes">
-            <div className="space-y-6">
-              <div className="flex justify-between items-center">
-                <h2 className="text-2xl font-bold">Mes Quiz</h2>
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Créer un Quiz
-                </Button>
+            <div className="space-y-8">
+              {/* Header Section */}
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-purple-600/20 rounded-3xl blur-3xl"></div>
+                <div className="relative bg-gradient-to-r from-slate-800/90 to-slate-700/90 backdrop-blur-sm border border-slate-600/50 rounded-3xl p-6">
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center space-x-4">
+                      <div className="relative">
+                        <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl blur-lg opacity-50"></div>
+                        <div className="relative bg-gradient-to-r from-blue-600 to-purple-600 p-3 rounded-2xl">
+                          <FileText className="h-6 w-6 text-white" />
+                        </div>
+                      </div>
+                      <div>
+                        <h2 className="text-2xl font-bold bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent">Mes Quiz</h2>
+                        <p className="text-slate-400 text-sm">Gérez et organisez tous vos quiz</p>
+                      </div>
+                    </div>
+                    <Button 
+                      className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white border-0 shadow-lg shadow-blue-600/25 transition-all duration-300 hover:scale-105"
+                      onClick={() => setActiveTab('ai-quiz')}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Créer un Quiz
+                    </Button>
+                  </div>
+                </div>
               </div>
               
               {quizzes.length === 0 ? (
                 activeTab === 'quizzes' ? (
-                  <Card>
-                    <CardContent className="flex items-center justify-center py-12">
-                      <div className="text-center">
-                        <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                        <h3 className="text-lg font-medium text-gray-900 mb-2">Aucun quiz</h3>
-                        <p className="text-gray-600 mb-4">Commencez par créer votre premier quiz</p>
-                        <Button>
-                          <Plus className="h-4 w-4 mr-2" />
-                          Créer un quiz
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ) : null
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {quizzes.map((quiz) => (
-                    <Card key={quiz.id}>
-                      <CardHeader>
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <CardTitle className="text-lg">{quiz.title}</CardTitle>
-                            <div className="flex items-center space-x-2 mt-2">
-                              <Badge variant={quiz.is_published ? 'default' : 'secondary'}>
-                                {quiz.is_published ? 'Publié' : 'Brouillon'}
-                              </Badge>
-                              <Badge variant="outline">{quiz.level}</Badge>
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-gradient-to-br from-purple-600/10 to-pink-600/10 rounded-3xl blur-2xl"></div>
+                    <div className="relative bg-gradient-to-br from-slate-800/90 to-slate-700/90 backdrop-blur-sm border border-slate-600/50 rounded-3xl overflow-hidden">
+                      <div className="flex items-center justify-center py-20">
+                        <div className="text-center space-y-6">
+                          <div className="relative">
+                            <div className="absolute inset-0 bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-3xl blur-2xl"></div>
+                            <div className="relative bg-gradient-to-r from-slate-700/50 to-slate-600/50 backdrop-blur-sm border border-slate-600/30 rounded-3xl p-12">
+                              <div className="w-20 h-20 bg-gradient-to-r from-purple-600 to-pink-600 rounded-3xl flex items-center justify-center mx-auto mb-6">
+                                <FileText className="h-10 w-10 text-white" />
+                              </div>
+                              <h3 className="text-2xl font-bold text-white mb-3">Aucun quiz créé</h3>
+                              <p className="text-slate-400 text-lg leading-relaxed max-w-md mx-auto mb-8">
+                                Commencez par créer votre premier quiz avec l'assistant IA
+                              </p>
+                              <Button 
+                                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white border-0 shadow-lg shadow-blue-600/25 transition-all duration-300 hover:scale-105"
+                                onClick={() => setActiveTab('ai-quiz')}
+                              >
+                                <Plus className="h-5 w-5 mr-2" />
+                                Créer mon premier quiz
+                              </Button>
                             </div>
                           </div>
-                          <div className="flex space-x-1">
-                            {!quiz.is_published && (
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : null
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+                  {quizzes.map((quiz) => (
+                    <div key={quiz.id} className="group relative">
+                      <div className="absolute inset-0 bg-gradient-to-r from-blue-600/5 to-purple-600/5 rounded-2xl blur-xl group-hover:blur-2xl transition-all"></div>
+                      <div className="relative bg-gradient-to-br from-slate-800/90 to-slate-700/90 backdrop-blur-sm border border-slate-600/50 rounded-2xl overflow-hidden hover:border-slate-500/60 transition-all duration-300 group-hover:shadow-2xl group-hover:shadow-blue-600/10">
+                        {/* Header */}
+                        <div className="bg-gradient-to-r from-slate-700/80 to-slate-600/80 backdrop-blur-sm border-b border-slate-600/50 p-6">
+                          <div className="flex justify-between items-start mb-4">
+                            <div className="flex-1">
+                              <h3 className="text-xl font-bold text-white mb-3 leading-tight">{quiz.title}</h3>
+                              <div className="flex items-center space-x-3">
+                                <Badge className={`${
+                                  quiz.is_published 
+                                    ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white border-0' 
+                                    : 'bg-gradient-to-r from-amber-600 to-orange-600 text-white border-0'
+                                } px-3 py-1 font-medium`}>
+                                  {quiz.is_published ? '✓ Publié' : '📝 Brouillon'}
+                                </Badge>
+                                <Badge className="bg-gradient-to-r from-blue-600 to-purple-600 text-white border-0 px-3 py-1">
+                                  {quiz.level}
+                                </Badge>
+                              </div>
+                            </div>
+                            <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-all duration-300">
+                              {!quiz.is_published && (
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm"
+                                  onClick={() => handlePublishQuiz(quiz.id, quiz.is_published)}
+                                  title="Publier le quiz"
+                                  className="hover:bg-green-600/20 text-green-400 hover:text-green-300 transition-all"
+                                >
+                                  <Send className="h-4 w-4" />
+                                </Button>
+                              )}
+                              {quiz.is_published && (
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm"
+                                  onClick={() => handlePublishQuiz(quiz.id, quiz.is_published)}
+                                  title="Dépublier le quiz"
+                                  className="hover:bg-blue-600/20 text-blue-400 hover:text-blue-300 transition-all"
+                                >
+                                  <CheckCircle className="h-4 w-4" />
+                                </Button>
+                              )}
                               <Button 
                                 variant="ghost" 
-                                size="icon"
-                                onClick={() => handlePublishQuiz(quiz.id, quiz.is_published)}
-                                title="Publier le quiz"
+                                size="sm"
+                                className="hover:bg-slate-600/50 text-slate-300 hover:text-white transition-all"
                               >
-                                <Send className="h-4 w-4 text-green-600" />
+                                <Eye className="h-4 w-4" />
                               </Button>
-                            )}
-                            {quiz.is_published && (
                               <Button 
                                 variant="ghost" 
-                                size="icon"
-                                onClick={() => handlePublishQuiz(quiz.id, quiz.is_published)}
-                                title="Dépublier le quiz"
+                                size="sm"
+                                className="hover:bg-slate-600/50 text-slate-300 hover:text-white transition-all"
                               >
-                                <CheckCircle className="h-4 w-4 text-blue-600" />
+                                <Edit className="h-4 w-4" />
                               </Button>
-                            )}
-                            <Button variant="ghost" size="icon">
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon">
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                className="hover:bg-red-600/20 text-red-400 hover:text-red-300 transition-all"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </div>
                         </div>
-                      </CardHeader>
-                      <CardContent>
-                        {quiz.description && (
-                          <p className="text-sm text-gray-600 mb-2">{quiz.description}</p>
-                        )}
-                        {quiz.classroom && (
-                          <div className="text-sm text-gray-500">
-                            Classe: {quiz.classroom.name} ({quiz.classroom.grade})
+                        
+                        {/* Content */}
+                        <div className="p-6 space-y-4">
+                          {quiz.description && (
+                            <div className="bg-gradient-to-r from-slate-700/50 to-slate-600/50 backdrop-blur-sm border border-slate-600/30 rounded-xl p-4">
+                              <p className="text-slate-200 leading-relaxed">{quiz.description}</p>
+                            </div>
+                          )}
+                          
+                          {quiz.classroom && (
+                            <div className="flex items-center space-x-3">
+                              <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl flex items-center justify-center">
+                                <span className="text-white text-sm font-bold">📚</span>
+                              </div>
+                              <div>
+                                <p className="text-white font-medium">{quiz.classroom.name}</p>
+                                <p className="text-slate-400 text-sm">{quiz.classroom.grade}</p>
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Stats */}
+                          <div className="flex items-center justify-between pt-4 border-t border-slate-600/30">
+                            <div className="flex items-center space-x-4">
+                              <div className="text-center">
+                                <p className="text-2xl font-bold text-white">10</p>
+                                <p className="text-slate-400 text-xs">Questions</p>
+                              </div>
+                              <div className="text-center">
+                                <p className="text-2xl font-bold text-blue-400">0</p>
+                                <p className="text-slate-400 text-xs">Tentatives</p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-slate-400 text-xs">Créé le</p>
+                              <p className="text-white text-sm font-medium">
+                                {new Date(quiz.created_at).toLocaleDateString('fr-FR')}
+                              </p>
+                            </div>
                           </div>
-                        )}
-                      </CardContent>
-                    </Card>
+                        </div>
+                      </div>
+                    </div>
                   ))}
                 </div>
               )}
             </div>
           </TabsContent>
           
-          <TabsContent value="classrooms">
-            <div className="space-y-6">
-              <h2 className="text-2xl font-bold">Mes Classes</h2>
-              
-              {classrooms.length === 0 ? (
-                <Card>
-                  <CardContent className="text-center py-12">
-                    <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">Aucune classe assignée</h3>
-                    <p className="text-gray-600">Contactez votre directeur pour être assigné à une classe</p>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {classrooms.map((classroom) => {
-                    const classStudents = students.filter(s => s.classroom_id === classroom.id)
-                    return (
-                      <Card key={classroom.id}>
-                        <CardHeader>
-                          <CardTitle>{classroom.name}</CardTitle>
-                          <Badge variant="outline">{classroom.grade}</Badge>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="space-y-3">
-                            <div>
-                              <div className="text-sm font-medium">Élèves: {classStudents.length}</div>
-                              {classStudents.length > 0 && (
-                                <div className="text-xs text-gray-500 mt-1">
-                                  {classStudents.slice(0, 3).map(s => s.user.full_name).join(', ')}
-                                  {classStudents.length > 3 && ` et ${classStudents.length - 3} autres`}
-                                </div>
-                              )}
-                            </div>
-                            <div className="flex space-x-2">
-                              <Button size="sm" variant="outline">
-                                Voir les élèves
-                              </Button>
-                              <Button size="sm">
-                                Quiz pour cette classe
-                              </Button>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-          </TabsContent>
           
           <TabsContent value="results">
-            <Card>
-              <CardHeader>
-                <CardTitle>Résultats et Analyses</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-600">Les fonctionnalités d'analyse des résultats seront disponibles prochainement.</p>
-              </CardContent>
-            </Card>
+            <ProgressTracker />
           </TabsContent>
         </Tabs>
       </main>

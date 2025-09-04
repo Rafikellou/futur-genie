@@ -37,7 +37,7 @@ Instructions:
 
 Réponds UNIQUEMENT avec un JSON valide dans ce format exact:
 {
-  "title": "Titre du quiz",
+  "title": "Titre sans le mot 'quiz' (ex: 'L'addition avec retenue' au lieu de 'Quiz sur l'addition avec retenue')",
   "description": "Description courte du quiz",
   "questions": [
     {
@@ -55,7 +55,7 @@ Réponds UNIQUEMENT avec un JSON valide dans ce format exact:
 }`
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-4",
+      model: "gpt-4o-mini",
       messages: [
         {
           role: "system",
@@ -162,7 +162,7 @@ Réponds UNIQUEMENT avec un JSON valide contenant le tableau de questions améli
 ]`
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-4",
+      model: "gpt-4o-mini",
       messages: [
         {
           role: "system",
@@ -193,6 +193,7 @@ Réponds UNIQUEMENT avec un JSON valide contenant le tableau de questions améli
       improvedQuestions = JSON.parse(cleanedResponse)
     } catch (parseError) {
       console.error('JSON Parse Error:', parseError)
+      console.error('Raw Response:', response)
       throw new Error('Réponse de l\'IA non valide. Veuillez réessayer.')
     }
 
@@ -200,6 +201,16 @@ Réponds UNIQUEMENT avec un JSON valide contenant le tableau de questions améli
       throw new Error('Format de réponse invalide')
     }
 
+    // Validate each improved question
+    for (let i = 0; i < improvedQuestions.length; i++) {
+      const q = improvedQuestions[i]
+      if (!q.question || !q.choices || !Array.isArray(q.choices) || q.choices.length !== 4 || !q.answer_keys || !Array.isArray(q.answer_keys)) {
+        console.error(`Question améliorée ${i + 1} a une structure invalide:`, q)
+        throw new Error(`Question améliorée ${i + 1} a une structure invalide`)
+      }
+    }
+
+    console.log('Questions améliorées validées:', improvedQuestions.length)
     return improvedQuestions
 
   } catch (error: any) {
