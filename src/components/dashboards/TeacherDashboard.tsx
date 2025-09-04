@@ -136,7 +136,7 @@ export function TeacherDashboard() {
         classroom_id: parent.classroom_id || null,
         user: {
           id: parent.id,
-          full_name: parent.full_name || parent.child_first_name || null,
+          full_name: parent.full_name || null,
           email: parent.email || null,
         },
       }))
