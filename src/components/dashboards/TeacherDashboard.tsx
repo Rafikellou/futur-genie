@@ -8,12 +8,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Progress } from '@/components/ui/progress'
-import { BookOpen, LogOut, Plus, Users, BarChart3, FileText, Eye, Edit, Trash2, Loader2, Bot, Clock, TrendingUp, Target, Calendar } from 'lucide-react'
+import { BookOpen, LogOut, Plus, Users, BarChart3, FileText, Eye, Edit, Trash2, Loader2, Bot, Clock, TrendingUp, Target, Calendar, Send, CheckCircle } from 'lucide-react'
 import { 
   getClassroomsByTeacher, 
   getQuizzesByTeacher, 
   getSubmissionsByQuiz, 
-  getTeacherEngagementStats
+  getTeacherEngagementStats,
+  publishQuiz
 } from '@/lib/database'
 import { getTeacherStudents } from '@/lib/database-teacher'
 import { AIQuizCreator } from '@/components/teacher/AIQuizCreator'
@@ -148,6 +149,16 @@ export function TeacherDashboard() {
       setError('Erreur lors du chargement des données')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handlePublishQuiz = async (quizId: string, currentStatus: boolean) => {
+    try {
+      await publishQuiz(quizId, !currentStatus)
+      // Refresh quizzes data
+      await fetchTeacherData()
+    } catch (error: any) {
+      setError('Erreur lors de la publication du quiz')
     }
   }
   
@@ -390,6 +401,26 @@ export function TeacherDashboard() {
                             </div>
                           </div>
                           <div className="flex space-x-1">
+                            {!quiz.is_published && (
+                              <Button 
+                                variant="ghost" 
+                                size="icon"
+                                onClick={() => handlePublishQuiz(quiz.id, quiz.is_published)}
+                                title="Publier le quiz"
+                              >
+                                <Send className="h-4 w-4 text-green-600" />
+                              </Button>
+                            )}
+                            {quiz.is_published && (
+                              <Button 
+                                variant="ghost" 
+                                size="icon"
+                                onClick={() => handlePublishQuiz(quiz.id, quiz.is_published)}
+                                title="Dépublier le quiz"
+                              >
+                                <CheckCircle className="h-4 w-4 text-blue-600" />
+                              </Button>
+                            )}
                             <Button variant="ghost" size="icon">
                               <Eye className="h-4 w-4" />
                             </Button>

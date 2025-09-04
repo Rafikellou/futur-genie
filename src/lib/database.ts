@@ -281,6 +281,30 @@ export async function createQuizItem(itemData: TablesInsert<'quiz_items'>) {
   return quizItem
 }
 
+export async function publishQuiz(quizId: string, isPublished: boolean) {
+  const { data: session } = await supabase.auth.getSession()
+  if (!session.session?.access_token) {
+    throw new Error('No active session')
+  }
+
+  const res = await fetch('/api/quizzes/publish', {
+    method: 'PATCH',
+    headers: {
+      'Authorization': `Bearer ${session.session.access_token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ quizId, isPublished }),
+  })
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err?.error || 'Failed to publish quiz')
+  }
+
+  const { quiz } = await res.json()
+  return quiz
+}
+
 export async function updateQuizItem(id: string, updates: any) {
   const { data, error } = await (supabase as any)
     .from('quiz_items')
