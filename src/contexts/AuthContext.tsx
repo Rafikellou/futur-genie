@@ -47,6 +47,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             email: session.user.email ?? null,
             role: meta.role || 'PARENT',
             school_id: meta.schoolId,
+            classroom_id: meta.classroomId,
             full_name: session.user.user_metadata?.full_name ?? null,
           }
           setProfile(userProfile)

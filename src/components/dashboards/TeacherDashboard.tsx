@@ -12,13 +12,13 @@ import { BookOpen, LogOut, Plus, Users, BarChart3, FileText, Eye, Edit, Trash2, 
 import { 
   getClassroomsByTeacher, 
   getQuizzesByTeacher, 
-  getSubmissionsByQuiz, 
   getTeacherEngagementStats,
   publishQuiz
 } from '@/lib/database'
 import { getTeacherStudents } from '@/lib/database-teacher'
 import { AIQuizCreator } from '@/components/teacher/AIQuizCreator'
 import { ProgressTracker } from '@/components/teacher/ProgressTracker'
+import { TeacherInvitationManager } from '@/components/teacher/TeacherInvitationManager'
 import Link from 'next/link'
 
 interface Quiz {
@@ -222,10 +222,11 @@ export function TeacherDashboard() {
         )}
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="overview" onClick={() => setActiveTab('overview')}>Vue d'ensemble</TabsTrigger>
             <TabsTrigger value="ai-quiz" onClick={() => setActiveTab('ai-quiz')}>Assistant IA</TabsTrigger>
             <TabsTrigger value="quizzes" onClick={() => setActiveTab('quizzes')}>Mes Quiz</TabsTrigger>
+            <TabsTrigger value="invitations" onClick={() => setActiveTab('invitations')}>Invitations</TabsTrigger>
             <TabsTrigger value="analytics" onClick={() => setActiveTab('analytics')}>Analyses</TabsTrigger>
             <TabsTrigger value="classrooms" onClick={() => setActiveTab('classrooms')}>Mes Classes</TabsTrigger>
             <TabsTrigger value="results" onClick={() => setActiveTab('results')}>Résultats</TabsTrigger>
@@ -353,6 +354,10 @@ export function TeacherDashboard() {
           
           <TabsContent value="ai-quiz">
             <AIQuizCreator />
+          </TabsContent>
+          
+          <TabsContent value="invitations">
+            <TeacherInvitationManager />
           </TabsContent>
           
           <TabsContent value="analytics">

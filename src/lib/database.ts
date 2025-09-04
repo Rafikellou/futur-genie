@@ -511,20 +511,6 @@ export async function getTeacherEngagementStats(teacherId: string) {
   return stats
 }
 
-export async function getSubmissionsByQuiz(quizId: string) {
-  const { data, error } = await supabase
-    .from('submissions')
-    .select(`
-      *,
-      student:users(id, full_name)
-    `)
-    .eq('quiz_id', quizId)
-    .order('created_at', { ascending: false })
-
-  if (error) throw error
-  return data
-}
-
 // Invitation link operations
 export async function createInvitationLink(linkData: TablesInsert<'invitation_links'>) {
   const res = await fetch('/api/invitations/create', {
@@ -583,27 +569,31 @@ export async function updateUser(id: string, updates: any): Promise<TablesRow<'u
 
 // Get available invitation links for a school
 export async function getInvitationLinksBySchool(schoolId: string) {
-  const res = await fetch('/api/invitations/by-school', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ schoolId }),
-  })
-  if (!res.ok) {
-    const text = await res.text().catch(() => '')
-    let msg = 'Failed to fetch invitation links by school'
-    try {
-      const parsed = JSON.parse(text)
-      msg = parsed?.error || msg
-    } catch {}
-    throw new Error(msg)
-  }
-  const text = await res.text()
-  try {
-    const json = JSON.parse(text)
-    const items = Array.isArray(json?.items) ? json.items : (Array.isArray(json) ? json : [])
-    return items
-  } catch (e) {
-    console.error('invitations/by-school parse error. Raw response:', text)
-    return []
-  }
+  const { data, error } = await supabase
+    .from('invitation_links')
+    .select(`
+      *,
+      classroom:classrooms(id, name, grade),
+      creator:users!invitation_links_created_by_fkey(id, full_name)
+    `)
+    .eq('school_id', schoolId)
+    .order('created_at', { ascending: false })
+
+  if (error) throw error
+  return data
+}
+
+export async function getInvitationLinksByClassroom(classroomId: string) {
+  const { data, error } = await supabase
+    .from('invitation_links')
+    .select(`
+      *,
+      classroom:classrooms(id, name, grade),
+      creator:users!invitation_links_created_by_fkey(id, full_name)
+    `)
+    .eq('classroom_id', classroomId)
+    .order('created_at', { ascending: false })
+
+  if (error) throw error
+  return data
 }

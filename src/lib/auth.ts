@@ -27,6 +27,7 @@ export interface AuthUser {
   email: string | null
   role: UserRole
   school_id: string | null
+  classroom_id?: string | null
   full_name: string | null
 }
 
