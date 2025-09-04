@@ -7,11 +7,12 @@ import type { Role } from '@/lib/auth-meta'
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({} as any))
-    const { token, email, password, full_name, role } = body as {
+    const { token, email, password, full_name, child_first_name, role } = body as {
       token?: string
       email?: string
       password?: string
       full_name?: string
+      child_first_name?: string
       role?: Role
     }
 
@@ -84,6 +85,7 @@ export async function POST(req: NextRequest) {
       classroom_id: invite.classroom_id,
       email,
       full_name,
+      child_first_name: child_first_name || null,
     }
 
     const { data: userRow, error: upsertErr } = await admin

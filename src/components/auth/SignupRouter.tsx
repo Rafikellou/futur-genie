@@ -27,14 +27,11 @@ export function SignupRouter({ onBack }: SignupRouterProps) {
     }
   }, [roleParam])
 
-  // If we have a token, try to determine the role from it or show the appropriate signup
+  // If we have a token, validate it and determine the role
   if (token) {
-    if (selectedRole === 'teacher' || roleParam === 'teacher') {
-      return <TeacherSignup token={token} onBack={onBack} />
-    }
-    if (selectedRole === 'parent' || roleParam === 'parent') {
-      return <ParentSignup token={token} onBack={onBack} />
-    }
+    // For now, we'll assume parent invitations and force parent signup
+    // TODO: Add token validation to determine actual role from invitation
+    return <ParentSignup token={token} onBack={onBack} />
   }
 
   // Show specific signup form if role is selected

@@ -54,6 +54,7 @@ export class AuthService {
             email,
             password,
             full_name: userData.full_name,
+            child_first_name: userData.child_first_name,
             role,
           }),
         })

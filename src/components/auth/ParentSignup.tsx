@@ -21,6 +21,7 @@ export function ParentSignup({ token, onBack }: ParentSignupProps) {
     password: '',
     confirmPassword: '',
     fullName: '',
+    childFirstName: '',
     phone: ''
   })
   const [loading, setLoading] = useState(false)
@@ -53,7 +54,7 @@ export function ParentSignup({ token, onBack }: ParentSignupProps) {
   }
 
   const validateForm = () => {
-    if (!formData.email || !formData.password || !formData.fullName) {
+    if (!formData.email || !formData.password || !formData.fullName || !formData.childFirstName) {
       setError('Veuillez remplir tous les champs obligatoires')
       return false
     }
@@ -84,6 +85,7 @@ export function ParentSignup({ token, onBack }: ParentSignupProps) {
         role: 'PARENT',
         school_id: invitationData?.school_id || null,
         full_name: formData.fullName,
+        child_first_name: formData.childFirstName,
         invitation_token: token
       })
       
@@ -138,6 +140,13 @@ export function ParentSignup({ token, onBack }: ParentSignupProps) {
             'Créez votre compte parent'
           }
         </CardDescription>
+        {invitationData && (
+          <div className="text-sm text-gray-600 mt-2 p-3 bg-blue-50 rounded-lg">
+            <p className="font-medium">📝 Important :</p>
+            <p>• Un compte parent = un enfant</p>
+            <p>• Pour un deuxième enfant, créez un nouveau compte avec un email différent</p>
+          </div>
+        )}
       </CardHeader>
       <CardContent>
         {invitationData && (
@@ -158,12 +167,24 @@ export function ParentSignup({ token, onBack }: ParentSignupProps) {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="fullName">Nom complet de l'enfant *</Label>
+            <Label htmlFor="fullName">Votre nom complet *</Label>
             <Input
               id="fullName"
-              placeholder="Nom et prénom de l'enfant"
+              placeholder="Votre nom et prénom"
               value={formData.fullName}
               onChange={(e) => handleChange('fullName', e.target.value)}
+              required
+              disabled={loading}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="childFirstName">Prénom de votre enfant *</Label>
+            <Input
+              id="childFirstName"
+              placeholder="Prénom de l'enfant"
+              value={formData.childFirstName}
+              onChange={(e) => handleChange('childFirstName', e.target.value)}
               required
               disabled={loading}
             />
