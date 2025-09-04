@@ -19,8 +19,11 @@ export async function GET(req: NextRequest) {
     const token = authHeader.substring(7)
     const admin = createClient(url, serviceRoleKey, { auth: { persistSession: false } })
     
-    // Verify the user token and get user info
-    const { data: { user }, error: userError } = await admin.auth.getUser(token)
+    // Create a regular client to verify the user token
+    const regularClient = createClient(url, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, { auth: { persistSession: false } })
+    
+    // Verify the user token
+    const { data: { user }, error: userError } = await regularClient.auth.getUser(token)
     if (userError || !user) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
