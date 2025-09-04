@@ -98,19 +98,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: upsertErr?.message || 'Failed to persist user profile' }, { status: 500 })
     }
 
-    // 5) Mark invitation as used
-    const { error: usedErr } = await admin
-      .from('invitation_links')
-      .update({ used_at: new Date().toISOString() })
-      .eq('id', invite.id)
+    // 5) Mark invitation as used (only for TEACHER invitations, PARENT invitations can be reused)
+    if (invite.intended_role === 'TEACHER') {
+      const { error: usedErr } = await admin
+        .from('invitation_links')
+        .update({ used_at: new Date().toISOString() })
+        .eq('id', invite.id)
 
-    if (usedErr) {
-      // Not fatal for the user creation, but surface it to caller
-      return NextResponse.json({
-        warning: 'User created but failed to mark invite as used',
-        user: userRow,
-      }, { status: 201 })
+      if (usedErr) {
+        // Not fatal for the user creation, but surface it to caller
+        return NextResponse.json({
+          warning: 'User created but failed to mark invite as used',
+          user: userRow,
+        }, { status: 201 })
+      }
     }
+    // For PARENT invitations, we don't mark as used to allow multiple parents to use the same link
 
     return NextResponse.json({ user: userRow }, { status: 201 })
   } catch (e: any) {

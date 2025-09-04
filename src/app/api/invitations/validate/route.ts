@@ -17,23 +17,24 @@ export async function POST(req: NextRequest) {
     const admin = createClient(url, serviceRoleKey, { auth: { persistSession: false } })
 
     // Use service role to bypass RLS and validate invitation token
-    const { data, error } = await admin
+    // Validate invitation token (not expired, and either not used OR is a PARENT invitation)
+    const { data: invitation, error } = await admin
       .from('invitation_links')
-      .select(`
-        *,
-        school:schools(id, name),
-        classroom:classrooms(id, name, grade)
-      `)
+      .select('*')
       .eq('token', token)
       .gt('expires_at', new Date().toISOString())
-      .is('used_at', null)
       .single()
 
-    if (error || !data) {
+    if (error || !invitation) {
       return NextResponse.json({ error: 'Invalid or expired invitation token' }, { status: 410 })
     }
 
-    return NextResponse.json({ invitation: data }, { status: 200 })
+    // Check if invitation is valid for use (PARENT invitations are always reusable, TEACHER invitations must not be used)
+    if (invitation.intended_role === 'TEACHER' && invitation.used_at) {
+      return NextResponse.json({ error: 'This teacher invitation has already been used' }, { status: 410 })
+    }
+
+    return NextResponse.json({ invitation }, { status: 200 })
   } catch (e) {
     console.error('Unexpected error invitations/validate:', e)
     return NextResponse.json({ error: 'Unexpected error' }, { status: 500 })

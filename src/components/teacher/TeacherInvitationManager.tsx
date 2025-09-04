@@ -165,12 +165,10 @@ ${profile?.full_name || 'L\'équipe enseignante'}`
   }
 
   const getStatusBadge = (invitation: InvitationLink) => {
-    if (invitation.used_at) {
-      return <Badge variant="outline" className="bg-green-50 text-green-700">Utilisé</Badge>
-    }
     if (isExpired(invitation.expires_at)) {
       return <Badge variant="destructive">Expiré</Badge>
     }
+    // For PARENT invitations, we don't show "used" status since they're reusable
     return <Badge className="bg-blue-50 text-blue-700">Actif</Badge>
   }
 
@@ -274,66 +272,6 @@ ${profile?.full_name || 'L\'équipe enseignante'}`
         </Dialog>
       </div>
 
-      {/* Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 flex items-center">
-              <LinkIcon className="h-4 w-4 mr-2" />
-              Total
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{invitations.length}</div>
-            <p className="text-gray-600 text-sm">invitations créées</p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 flex items-center">
-              <Clock className="h-4 w-4 mr-2" />
-              Actives
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {invitations.filter(inv => !inv.used_at && !isExpired(inv.expires_at)).length}
-            </div>
-            <p className="text-gray-600 text-sm">en attente</p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 flex items-center">
-              <Users className="h-4 w-4 mr-2" />
-              Utilisées
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">
-              {invitations.filter(inv => inv.used_at).length}
-            </div>
-            <p className="text-gray-600 text-sm">parents inscrits</p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 flex items-center">
-              <Calendar className="h-4 w-4 mr-2" />
-              Expirées
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">
-              {invitations.filter(inv => !inv.used_at && isExpired(inv.expires_at)).length}
-            </div>
-            <p className="text-gray-600 text-sm">liens expirés</p>
-          </CardContent>
-        </Card>
-      </div>
       
       {/* Invitations List */}
       <div className="space-y-4">
@@ -376,9 +314,7 @@ ${profile?.full_name || 'L\'équipe enseignante'}`
                     <div className="space-y-1 text-sm text-gray-600">
                       <p>Créé le {formatDate(invitation.created_at)}</p>
                       <p>Expire le {formatDate(invitation.expires_at)}</p>
-                      {invitation.used_at && (
-                        <p className="text-green-600">Utilisé le {formatDate(invitation.used_at)}</p>
-                      )}
+                      <p className="text-blue-600">Lien réutilisable pour tous les parents</p>
                     </div>
                   </div>
                   
@@ -387,7 +323,7 @@ ${profile?.full_name || 'L\'équipe enseignante'}`
                       variant="outline"
                       size="sm"
                       onClick={() => copyToClipboard(invitation)}
-                      disabled={invitation.used_at !== null || isExpired(invitation.expires_at)}
+                      disabled={isExpired(invitation.expires_at)}
                     >
                       <Copy className="h-4 w-4 mr-2" />
                       {copiedTokenId === invitation.id ? 'Copié!' : 'Copier'}
@@ -397,7 +333,7 @@ ${profile?.full_name || 'L\'équipe enseignante'}`
                       variant="outline"
                       size="sm"
                       onClick={() => sendEmailInvitation(invitation)}
-                      disabled={invitation.used_at !== null || isExpired(invitation.expires_at)}
+                      disabled={isExpired(invitation.expires_at)}
                     >
                       <Mail className="h-4 w-4 mr-2" />
                       Email
