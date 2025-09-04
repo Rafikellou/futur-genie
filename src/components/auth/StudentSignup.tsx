@@ -81,7 +81,7 @@ export function StudentSignup({ token, onBack }: StudentSignupProps) {
 
     try {
       await signUp(formData.email, formData.password, {
-        role: 'STUDENT',
+        role: 'PARENT',
         school_id: invitationData?.school_id || null,
         full_name: formData.fullName,
         invitation_token: token
