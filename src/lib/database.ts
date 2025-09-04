@@ -163,14 +163,27 @@ export async function getClassroomsByTeacher(teacherId: string) {
 
 // Quiz operations
 export async function createQuiz(quizData: TablesInsert<'quizzes'>) {
-  const { data, error } = await supabase
-    .from('quizzes')
-    .insert(quizData as any)
-    .select()
-    .single()
+  const { data: session } = await supabase.auth.getSession()
+  if (!session.session?.access_token) {
+    throw new Error('No active session')
+  }
 
-  if (error) throw error
-  return data
+  const res = await fetch('/api/quizzes/create', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${session.session.access_token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(quizData),
+  })
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err?.error || 'Failed to create quiz')
+  }
+
+  const { quiz } = await res.json()
+  return quiz
 }
 
 export async function getQuizzesByLevel(level: string) {
@@ -245,14 +258,27 @@ export async function getQuizWithItems(quizId: string) {
 
 // Quiz item operations
 export async function createQuizItem(itemData: TablesInsert<'quiz_items'>) {
-  const { data, error } = await supabase
-    .from('quiz_items')
-    .insert(itemData as any)
-    .select()
-    .single()
+  const { data: session } = await supabase.auth.getSession()
+  if (!session.session?.access_token) {
+    throw new Error('No active session')
+  }
 
-  if (error) throw error
-  return data
+  const res = await fetch('/api/quiz-items/create', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${session.session.access_token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(itemData),
+  })
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err?.error || 'Failed to create quiz item')
+  }
+
+  const { quizItem } = await res.json()
+  return quizItem
 }
 
 export async function updateQuizItem(id: string, updates: any) {
