@@ -60,6 +60,8 @@ CREATE TABLE IF NOT EXISTS public.quizzes (
   classroom_id  uuid NOT NULL REFERENCES public.classrooms(id) ON DELETE CASCADE,
   school_id     uuid NOT NULL REFERENCES public.schools(id) ON DELETE CASCADE,
   is_published  boolean NOT NULL DEFAULT false,
+  published_at  timestamptz,
+  unpublish_at  timestamptz,
   created_at    timestamptz NOT NULL DEFAULT timezone('utc'::text, now())
 );
 

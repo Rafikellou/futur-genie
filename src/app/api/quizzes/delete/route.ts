@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getAuthMeta } from '@/lib/auth-meta'
 
-export async function PATCH(req: NextRequest) {
+export async function DELETE(req: NextRequest) {
   try {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -35,46 +35,59 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'Access denied - teachers and directors only' }, { status: 403 })
     }
 
-    // Get quiz ID and published status from request body
-    const { quizId, isPublished } = await req.json()
+    // Get quiz ID from request body
+    const { quizId } = await req.json()
 
-    if (!quizId || typeof isPublished !== 'boolean') {
-      return NextResponse.json({ error: 'Quiz ID and published status are required' }, { status: 400 })
+    if (!quizId) {
+      return NextResponse.json({ error: 'Quiz ID is required' }, { status: 400 })
     }
 
-    // Update quiz publication status with auto-unpublish scheduling
-    const now = new Date().toISOString()
-    const updateData: any = {
-      is_published: isPublished
-    }
-
-    if (isPublished) {
-      // Si on publie le quiz, définir la date de publication et calculer la dépublication (7 jours)
-      updateData.published_at = now
-      const unpublishDate = new Date(now)
-      unpublishDate.setDate(unpublishDate.getDate() + 7)
-      updateData.unpublish_at = unpublishDate.toISOString()
-    } else {
-      // Si on dépublie manuellement, effacer les dates
-      updateData.published_at = null
-      updateData.unpublish_at = null
-    }
-
-    const { data: quiz, error: updateError } = await admin
+    // Verify quiz ownership or school access
+    const { data: quiz, error: quizError } = await admin
       .from('quizzes')
-      .update(updateData)
+      .select('id, owner_id, school_id')
       .eq('id', quizId)
-      .select()
       .single()
 
-    if (updateError) {
-      console.error('Quiz publication error:', updateError)
-      return NextResponse.json({ error: 'Failed to update quiz: ' + updateError.message }, { status: 500 })
+    if (quizError || !quiz) {
+      return NextResponse.json({ error: 'Quiz not found' }, { status: 404 })
     }
 
-    return NextResponse.json({ quiz }, { status: 200 })
+    // Check if user has permission to delete this quiz
+    if (meta.role === 'TEACHER' && quiz.owner_id !== user.id) {
+      return NextResponse.json({ error: 'You can only delete your own quizzes' }, { status: 403 })
+    }
+
+    if (meta.role === 'DIRECTOR' && quiz.school_id !== meta.schoolId) {
+      return NextResponse.json({ error: 'You can only delete quizzes from your school' }, { status: 403 })
+    }
+
+    // Delete quiz items first (cascade should handle this, but being explicit)
+    await admin
+      .from('quiz_items')
+      .delete()
+      .eq('quiz_id', quizId)
+
+    // Delete submissions
+    await admin
+      .from('submissions')
+      .delete()
+      .eq('quiz_id', quizId)
+
+    // Delete the quiz
+    const { error: deleteError } = await admin
+      .from('quizzes')
+      .delete()
+      .eq('id', quizId)
+
+    if (deleteError) {
+      console.error('Quiz deletion error:', deleteError)
+      return NextResponse.json({ error: 'Failed to delete quiz: ' + deleteError.message }, { status: 500 })
+    }
+
+    return NextResponse.json({ success: true }, { status: 200 })
   } catch (e: any) {
-    console.error('Unexpected error in quizzes/publish:', e)
+    console.error('Unexpected error in quizzes/delete:', e)
     return NextResponse.json({ 
       error: 'Unexpected error: ' + (e.message || 'Unknown error')
     }, { status: 500 })

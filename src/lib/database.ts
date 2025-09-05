@@ -1,5 +1,6 @@
 import { supabase } from './supabase'
-import { Database } from '@/types/database'
+import { createClient } from '@supabase/supabase-js'
+import type { Database } from '@/types/database'
 
 type Tables = Database['public']['Tables']
 type TablesInsert<T extends keyof Tables> = Tables[T]['Insert']
@@ -87,7 +88,16 @@ export async function getTeacherByClassroom(classroomId: string): Promise<{ full
 
 // School operations
 export async function createSchool(name: string): Promise<TablesRow<'schools'>> {
-  const { data, error } = await supabase
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  
+  if (!url || !serviceRoleKey) {
+    throw new Error('Server configuration error')
+  }
+
+  const admin = createClient(url, serviceRoleKey, { auth: { persistSession: false } })
+  
+  const { data, error } = await admin
     .from('schools')
     .insert({ name } as any)
     .select()
@@ -98,7 +108,16 @@ export async function createSchool(name: string): Promise<TablesRow<'schools'>> 
 }
 
 export async function getSchoolById(id: string) {
-  const { data, error } = await supabase
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  
+  if (!url || !serviceRoleKey) {
+    throw new Error('Server configuration error')
+  }
+
+  const admin = createClient(url, serviceRoleKey, { auth: { persistSession: false } })
+  
+  const { data, error } = await admin
     .from('schools')
     .select('*')
     .eq('id', id)
@@ -342,6 +361,30 @@ export async function publishQuiz(quizId: string, isPublished: boolean) {
   return quiz
 }
 
+// Delete quiz function
+export async function deleteQuiz(quizId: string) {
+  const { data: session } = await supabase.auth.getSession()
+  if (!session.session?.access_token) {
+    throw new Error('No active session')
+  }
+
+  const res = await fetch('/api/quizzes/delete', {
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${session.session.access_token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ quizId }),
+  })
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err?.error || 'Failed to delete quiz')
+  }
+
+  return true
+}
+
 export async function updateQuizItem(id: string, updates: any) {
   const { data, error } = await (supabase as any)
     .from('quiz_items')
@@ -421,7 +464,16 @@ export async function getSubmissionsByParent(parentId: string): Promise<TablesRo
 }
 
 export async function getSubmissionsByQuiz(quizId: string) {
-  const { data, error } = await supabase
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  
+  if (!url || !serviceRoleKey) {
+    throw new Error('Server configuration error')
+  }
+
+  const admin = createClient(url, serviceRoleKey, { auth: { persistSession: false } })
+  
+  const { data, error } = await admin
     .from('submissions')
     .select(`
       *,

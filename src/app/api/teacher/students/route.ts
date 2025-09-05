@@ -85,7 +85,7 @@ export async function GET(req: NextRequest) {
     console.log('Getting students for classroom:', userProfile.classroom_id)
     const { data: students, error: studentsError } = await admin
       .from('users')
-      .select('id, email, full_name, created_at')
+      .select('id, email, full_name, child_first_name, created_at')
       .eq('role', 'PARENT')
       .eq('classroom_id', userProfile.classroom_id)
       .order('created_at', { ascending: false })

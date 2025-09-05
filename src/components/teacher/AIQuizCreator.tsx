@@ -366,7 +366,7 @@ export function AIQuizCreator() {
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: customScrollbarStyles }} />
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4 sm:p-6">
+      <div className="space-y-6">
       
       {error && (
         <Alert variant="destructive">
@@ -382,11 +382,11 @@ export function AIQuizCreator() {
         </Alert>
       )}
       
-      <div className="max-w-4xl mx-auto h-[calc(100vh-2rem)] sm:h-[calc(100vh-3rem)]">
-        {/* Chat Interface - Full Width */}
+      <div className="w-full h-full">
+        {/* Chat Interface - Full screen adaptation */}
         <div className="relative h-full">
           <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 to-purple-600/10 rounded-2xl sm:rounded-3xl blur-2xl"></div>
-          <div className="relative bg-gradient-to-br from-slate-800/90 to-slate-700/90 backdrop-blur-sm border border-slate-600/50 rounded-2xl sm:rounded-3xl overflow-hidden h-full flex flex-col">
+          <div className="relative bg-gradient-to-br from-slate-800/90 to-slate-700/90 backdrop-blur-sm border border-slate-600/50 rounded-2xl sm:rounded-3xl overflow-hidden flex flex-col" style={{ height: 'calc(100vh - 240px)', minHeight: '500px' }}>
             
             {/* Messages */}
             <div className="flex-1 overflow-y-auto p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6 custom-scrollbar">
