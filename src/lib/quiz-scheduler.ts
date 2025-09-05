@@ -9,7 +9,7 @@ export interface QuizScheduleInfo {
   id: string
   title: string
   published_at: string
-  unpublish_date: string
+  unpublish_at: string
   is_published: boolean
 }
 
@@ -28,22 +28,18 @@ export function calculateUnpublishDate(publishedAt: Date): Date {
 export async function scheduleQuizUnpublish(quizId: string, isPublished: boolean): Promise<void> {
   const now = new Date().toISOString()
   
-  const updateData: any = {
+  const updateData = {
     is_published: isPublished,
-    updated_at: now
+    ...(isPublished ? {
+      published_at: now,
+      unpublish_at: calculateUnpublishDate(new Date(now)).toISOString()
+    } : {
+      published_at: null,
+      unpublish_at: null
+    })
   }
 
-  if (isPublished) {
-    // Si on publie le quiz, définir la date de publication et calculer la dépublication
-    updateData.published_at = now
-    updateData.unpublish_date = calculateUnpublishDate(new Date(now)).toISOString()
-  } else {
-    // Si on dépublie manuellement, effacer les dates
-    updateData.published_at = null
-    updateData.unpublish_date = null
-  }
-
-  const { error } = await supabase
+  const { error } = await (supabase as any)
     .from('quizzes')
     .update(updateData)
     .eq('id', quizId)
@@ -59,10 +55,10 @@ export async function getQuizzesToUnpublish(): Promise<QuizScheduleInfo[]> {
   
   const { data, error } = await supabase
     .from('quizzes')
-    .select('id, title, published_at, unpublish_date, is_published')
+    .select('id, title, published_at, unpublish_at, is_published')
     .eq('is_published', true)
-    .not('unpublish_date', 'is', null)
-    .lte('unpublish_date', now)
+    .not('unpublish_at', 'is', null)
+    .lte('unpublish_at', now)
 
   if (error) throw error
   return data || []
@@ -80,13 +76,14 @@ export async function unpublishExpiredQuizzes(): Promise<number> {
 
   const quizIds = expiredQuizzes.map(q => q.id)
   
-  const { error } = await supabase
+  const unpublishUpdate = {
+    is_published: false,
+    unpublish_at: null
+  }
+
+  const { error } = await (supabase as any)
     .from('quizzes')
-    .update({
-      is_published: false,
-      unpublish_date: null,
-      updated_at: new Date().toISOString()
-    })
+    .update(unpublishUpdate)
     .in('id', quizIds)
 
   if (error) throw error
