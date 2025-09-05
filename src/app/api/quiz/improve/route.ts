@@ -3,7 +3,7 @@ import { improveQuizQuestions } from '@/lib/openai'
 
 export async function POST(request: NextRequest) {
   try {
-    const { currentQuestions, feedback, gradeLevel } = await request.json()
+    const { currentQuestions, feedback, gradeLevel, aiModel } = await request.json()
 
     if (!currentQuestions || !feedback || !gradeLevel) {
       return NextResponse.json(
@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const improvedQuestions = await improveQuizQuestions(currentQuestions, feedback, gradeLevel)
+    const improvedQuestions = await improveQuizQuestions(currentQuestions, feedback, gradeLevel, aiModel)
 
     return NextResponse.json({ questions: improvedQuestions })
   } catch (error: any) {

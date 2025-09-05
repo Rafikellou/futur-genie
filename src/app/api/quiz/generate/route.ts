@@ -3,7 +3,7 @@ import { generateQuizFromLesson } from '@/lib/openai'
 
 export async function POST(request: NextRequest) {
   try {
-    const { lessonDescription, gradeLevel } = await request.json()
+    const { lessonDescription, gradeLevel, aiModel } = await request.json()
 
     if (!lessonDescription || !gradeLevel) {
       return NextResponse.json(
@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const quiz = await generateQuizFromLesson(lessonDescription, gradeLevel)
+    const quiz = await generateQuizFromLesson(lessonDescription, gradeLevel, aiModel)
 
     return NextResponse.json(quiz)
   } catch (error: any) {

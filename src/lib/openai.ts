@@ -20,7 +20,7 @@ export interface GeneratedQuiz {
   questions: QuizQuestion[]
 }
 
-export async function generateQuizFromLesson(lessonDescription: string, gradeLevel: string): Promise<GeneratedQuiz> {
+export async function generateQuizFromLesson(lessonDescription: string, gradeLevel: string, aiModel: 'gpt-4o-mini' | 'gpt-4o' = 'gpt-4o-mini'): Promise<GeneratedQuiz> {
   try {
     const prompt = `Tu es un enseignant expert. Génère un quiz de 10 questions à choix multiples basé sur la leçon suivante pour des élèves de niveau ${gradeLevel}.
 
@@ -55,7 +55,7 @@ Réponds UNIQUEMENT avec un JSON valide dans ce format exact:
 }`
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: aiModel,
       messages: [
         {
           role: "system",
@@ -127,7 +127,7 @@ Réponds UNIQUEMENT avec un JSON valide dans ce format exact:
   }
 }
 
-export async function improveQuizQuestions(currentQuestions: QuizQuestion[], feedback: string, gradeLevel: string): Promise<QuizQuestion[]> {
+export async function improveQuizQuestions(currentQuestions: QuizQuestion[], feedback: string, gradeLevel: string, aiModel: 'gpt-4o-mini' | 'gpt-4o' = 'gpt-4o-mini'): Promise<QuizQuestion[]> {
   try {
     const prompt = `Tu es un enseignant expert. Améliore ces questions de quiz selon les commentaires fournis.
 
@@ -162,7 +162,7 @@ Réponds UNIQUEMENT avec un JSON valide contenant le tableau de questions améli
 ]`
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: aiModel,
       messages: [
         {
           role: "system",

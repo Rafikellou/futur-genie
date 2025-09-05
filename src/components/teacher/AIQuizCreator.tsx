@@ -3,6 +3,10 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
+import { supabase } from '@/lib/supabase'
+import type { Database } from '@/types/database'
+
+type QuizUpdate = Database['public']['Tables']['quizzes']['Update']
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -11,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { Bot, Send, User, Sparkles, CheckCircle, XCircle, RefreshCw, Save, Loader2, MessageSquare, Edit, Trash2, ShieldAlert, FileText, Globe } from 'lucide-react'
+import { Bot, Send, User, Sparkles, CheckCircle, XCircle, RefreshCw, Save, Loader2, MessageSquare, Edit, Trash2, ShieldAlert, FileText, Globe, Zap } from 'lucide-react'
 
 // Custom scrollbar styles
 const customScrollbarStyles = `
@@ -98,6 +102,10 @@ export function AIQuizCreator() {
   const [quizDescription, setQuizDescription] = useState('')
   const [editingQuestionIndex, setEditingQuestionIndex] = useState<number | null>(null)
   const [isSaving, setIsSaving] = useState(false)
+  
+  // AI Model state
+  const [aiModel, setAiModel] = useState<'gpt-4o-mini' | 'gpt-4o'>('gpt-4o-mini')
+  const [hasInteracted, setHasInteracted] = useState(false)
 
   useEffect(() => {
     if (profile?.id) {
@@ -177,6 +185,11 @@ export function AIQuizCreator() {
     setIsGenerating(true)
     setError(null)
     
+    // Mark that user has interacted (for showing boost button)
+    if (!hasInteracted) {
+      setHasInteracted(true)
+    }
+    
     try {
       // Determine grade level from selected classroom
       let gradeLevel = 'CE1' // default
@@ -201,7 +214,8 @@ export function AIQuizCreator() {
         },
         body: JSON.stringify({
           lessonDescription: message,
-          gradeLevel
+          gradeLevel,
+          aiModel
         }),
       })
       
@@ -216,7 +230,8 @@ export function AIQuizCreator() {
       setQuizDescription(quiz.description)
       
       // Add assistant response with quiz data
-      addMessage('assistant', `J'ai généré un quiz "${quiz.title}" avec ${quiz.questions.length} questions basées sur votre leçon :`, quiz)
+      const modelText = aiModel === 'gpt-4o' ? ' (Intelligence boostée)' : ''
+      addMessage('assistant', `J'ai généré un quiz "${quiz.title}" avec ${quiz.questions.length} questions basées sur votre leçon${modelText} :`, quiz)
       
     } catch (error: any) {
       handleSupabaseError(error as any)
@@ -249,7 +264,8 @@ export function AIQuizCreator() {
         body: JSON.stringify({
           currentQuestions: generatedQuiz.questions,
           feedback: feedback,
-          gradeLevel
+          gradeLevel,
+          aiModel
         }),
       })
       
@@ -315,23 +331,26 @@ export function AIQuizCreator() {
       
       // If publishing, update publication dates via API
       if (publish) {
-        try {
-          const publishResponse = await fetch('/api/quizzes/publish', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              quizId: createdQuiz.id,
-              isPublished: true
-            }),
-          })
-          
-          if (!publishResponse.ok) {
-            console.warn('Failed to update publication dates, but quiz was created')
-          }
-        } catch (publishError) {
-          console.warn('Error updating publication dates:', publishError)
+        const { data: session } = await supabase.auth.getSession()
+        if (!session.session?.access_token) {
+          throw new Error('Session expirée, veuillez vous reconnecter')
+        }
+
+        const publishResponse = await fetch('/api/quizzes/publish', {
+          method: 'PATCH',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.session.access_token}`
+          },
+          body: JSON.stringify({ 
+            quizId: createdQuiz.id, 
+            isPublished: true 
+          }),
+        });
+        
+        if (!publishResponse.ok) {
+          const errorData = await publishResponse.json().catch(() => ({}));
+          throw new Error(`Erreur lors de la publication: ${errorData.error || 'Erreur inconnue'}`);
         }
       }
       
@@ -588,6 +607,23 @@ export function AIQuizCreator() {
             
             {/* Input Area */}
             <div className="bg-gradient-to-r from-slate-700/80 to-slate-600/80 backdrop-blur-sm border-t border-slate-600/50 p-4 space-y-4">
+              {/* AI Model Boost Button */}
+              {hasInteracted && (
+                <div className="flex justify-center">
+                  <Button 
+                    onClick={() => setAiModel(aiModel === 'gpt-4o-mini' ? 'gpt-4o' : 'gpt-4o-mini')}
+                    className={`${
+                      aiModel === 'gpt-4o' 
+                        ? 'bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600' 
+                        : 'bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800'
+                    } text-white px-4 py-2 text-sm font-medium shadow-lg transition-all duration-300 hover:scale-105 border-0`}
+                  >
+                    <Zap className="h-4 w-4 mr-2" />
+                    {aiModel === 'gpt-4o-mini' ? 'Augmenter mon intelligence' : 'Intelligence boostée ✨'}
+                  </Button>
+                </div>
+              )}
+              
               <div className="relative">
                 <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4">
                   <div className="flex-1 relative">
