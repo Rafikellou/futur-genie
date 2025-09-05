@@ -78,7 +78,8 @@ export function QuizTaking({ quizId, onComplete, onExit }: QuizTakingProps) {
   const [showFeedback, setShowFeedback] = useState(false)
   const [currentFeedback, setCurrentFeedback] = useState<{ isCorrect: boolean; message: string } | null>(null)
   const [timeElapsed, setTimeElapsed] = useState(0)
-  const [quizStartTime] = useState(new Date())
+  const [quizStartTime, setQuizStartTime] = useState<Date | null>(null)
+  const [quizStarted, setQuizStarted] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showConfirmSubmit, setShowConfirmSubmit] = useState(false)
   const [quizCompleted, setQuizCompleted] = useState(false)
@@ -91,13 +92,15 @@ export function QuizTaking({ quizId, onComplete, onExit }: QuizTakingProps) {
   }, [quizId])
 
   useEffect(() => {
-    // Timer
+    // Timer - only start when quiz is started
+    if (!quizStarted) return
+
     const timer = setInterval(() => {
       setTimeElapsed(prev => prev + 1)
     }, 1000)
 
     return () => clearInterval(timer)
-  }, [])
+  }, [quizStarted])
 
   const fetchQuiz = async () => {
     try {
@@ -248,6 +251,11 @@ export function QuizTaking({ quizId, onComplete, onExit }: QuizTakingProps) {
         throw new Error('Informations de classe et d\'école non trouvées.')
       }
 
+      // Calculate quiz duration in minutes
+      const quizDurationMinutes = quizStartTime 
+        ? Math.round((new Date().getTime() - quizStartTime.getTime()) / (1000 * 60))
+        : timeElapsed / 60
+
       await createSubmission({
         quiz_id: quizId,
         parent_id: profile.id,
@@ -256,6 +264,7 @@ export function QuizTaking({ quizId, onComplete, onExit }: QuizTakingProps) {
         total_questions: total,
         school_id: claims.schoolId,
         classroom_id: claims.classroomId,
+        quiz_duration_minutes: quizDurationMinutes,
       })
 
       setFinalScore({ score, total })
@@ -473,6 +482,62 @@ export function QuizTaking({ quizId, onComplete, onExit }: QuizTakingProps) {
   const progress = ((currentQuestionIndex + 1) / quiz.items.length) * 100
   const answeredCount = getAnsweredQuestionsCount()
   const correctCount = getCorrectAnswersCount()
+
+  // Show start screen if quiz hasn't started yet
+  if (!quizStarted) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4" style={{ background: 'var(--background)' }}>
+        <div className="max-w-lg mx-auto w-full">
+          <div className="card-dark p-6 sm:p-8 text-center relative overflow-hidden border border-slate-600/30">
+            <div className="absolute inset-0 bg-gradient-to-br from-slate-800/40 via-transparent to-slate-900/30 pointer-events-none"></div>
+            <div className="relative">
+              <div className="gradient-primary p-5 sm:p-6 rounded-full w-20 h-20 sm:w-24 sm:h-24 mx-auto mb-6 flex items-center justify-center shadow-2xl">
+                <BookOpen className="h-10 w-10 sm:h-12 sm:w-12 text-white" />
+              </div>
+              
+              <h1 className="text-2xl sm:text-3xl font-bold text-white mb-4">{quiz.title}</h1>
+              {quiz.description && (
+                <p className="text-slate-400 mb-6 text-sm sm:text-base break-words leading-relaxed">{quiz.description}</p>
+              )}
+              
+              <div className="space-y-4 mb-8">
+                <div className="flex items-center justify-center gap-4 text-slate-300">
+                  <div className="flex items-center gap-2">
+                    <BookOpen className="h-5 w-5 text-blue-400" />
+                    <span className="text-sm">{quiz.items.length} questions</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-blue-500/20 text-blue-300 border-blue-400/30">
+                      {quiz.level}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+              
+              <button 
+                onClick={() => {
+                  setQuizStarted(true)
+                  setQuizStartTime(new Date())
+                }}
+                className="w-full btn-gradient gradient-primary hover-lift py-3 px-6 rounded-xl text-white font-medium flex items-center justify-center gap-2 border border-blue-400/30 shadow-lg shadow-blue-500/20"
+              >
+                <Timer className="h-5 w-5" />
+                Commencer le Quiz
+              </button>
+              
+              <button 
+                onClick={() => onExit?.() || (window.location.href = '/parent')}
+                className="w-full mt-3 py-3 px-6 bg-slate-600/80 hover:bg-slate-500 text-white rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Retour
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen relative" style={{ background: 'var(--background)' }}>

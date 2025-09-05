@@ -24,7 +24,7 @@ import {
   getSubmissionsByQuiz,
   getClassroomsByTeacher,
 } from '@/lib/database'
-import { getTeacherStudents } from '@/lib/database-teacher'
+import { getTeacherStudents, getSubmissionsByTeacher } from '@/lib/database-teacher'
 
 interface Quiz {
   id: string
@@ -48,6 +48,7 @@ interface Submission {
   answers: any
   score: number
   total_questions: number
+  quiz_duration_minutes?: number | null
   created_at: string
   student: {
     id: string
@@ -178,13 +179,15 @@ export function AdvancedAnalytics() {
       let allSubmissions: Submission[] = []
       let totalPossibleSubmissions = 0
 
-      // Get submissions for each quiz
+      // Get all submissions for teacher using the API
+      const allTeacherSubmissions = await getSubmissionsByTeacher(profile!.id) as Submission[]
+      
+      // Filter submissions by quiz and date range
       for (const quiz of filteredQuizzes) {
-        const submissions = await getSubmissionsByQuiz(quiz.id) as Submission[]
-        const filteredSubmissions = submissions.filter(sub => 
-          new Date(sub.created_at) >= startDate
+        const quizSubmissions = allTeacherSubmissions.filter(sub => 
+          sub.quiz_id === quiz.id && new Date(sub.created_at) >= startDate
         )
-        allSubmissions = [...allSubmissions, ...filteredSubmissions]
+        allSubmissions = [...allSubmissions, ...quizSubmissions]
 
         // Calculate possible submissions (students in classroom)
         const classroomStudents = students.filter(s => s.classroom_id === quiz.classroom_id)
@@ -201,8 +204,13 @@ export function AdvancedAnalytics() {
         ? allSubmissions.reduce((sum, sub) => sum + (sub.score / sub.total_questions * 100), 0) / allSubmissions.length
         : 0
 
-      // Calculate average time (mock data for now - would need actual time tracking)
-      const averageTime = allSubmissions.length > 0 ? 8.5 : 0 // minutes
+      // Calculate average time using quiz_duration_minutes
+      const averageTime = allSubmissions.length > 0 
+        ? allSubmissions
+            .filter(sub => sub.quiz_duration_minutes != null)
+            .reduce((sum, sub) => sum + (sub.quiz_duration_minutes || 0), 0) / 
+            Math.max(1, allSubmissions.filter(sub => sub.quiz_duration_minutes != null).length)
+        : 0
 
       // Calculate trends (mock data for demonstration)
       const completionTrend = generateTrendData(completionRate, daysBack)

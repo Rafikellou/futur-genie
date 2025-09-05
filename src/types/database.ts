@@ -156,6 +156,7 @@ export interface Database {
           answers: Json
           score: number
           total_questions: number
+          quiz_duration_minutes: number | null
           school_id: string
           classroom_id: string
           created_at: string
@@ -167,6 +168,7 @@ export interface Database {
           answers: Json
           score: number
           total_questions: number
+          quiz_duration_minutes?: number | null
           school_id: string
           classroom_id: string
           created_at?: string
@@ -178,6 +180,7 @@ export interface Database {
           answers?: Json
           score?: number
           total_questions?: number
+          quiz_duration_minutes?: number | null
           school_id?: string
           classroom_id?: string
           created_at?: string

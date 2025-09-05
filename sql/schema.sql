@@ -79,16 +79,15 @@ CREATE TABLE IF NOT EXISTS public.quiz_items (
 );
 
 -- Submissions (réponses des parents)
-CREATE TABLE IF NOT EXISTS public.submissions (
-  id               uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-  quiz_id          uuid NOT NULL REFERENCES public.quizzes(id) ON DELETE CASCADE,
-  parent_id        uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-  answers          jsonb NOT NULL,
-  score            int4 NOT NULL DEFAULT 0,
-  total_questions  int4 NOT NULL DEFAULT 0,
-  school_id        uuid NOT NULL REFERENCES public.schools(id) ON DELETE CASCADE,
-  classroom_id     uuid NOT NULL REFERENCES public.classrooms(id) ON DELETE CASCADE,
-  created_at       timestamptz NOT NULL DEFAULT timezone('utc'::text, now())
+CREATE TABLE public.submissions (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  quiz_id UUID NOT NULL REFERENCES public.quizzes(id) ON DELETE CASCADE,
+  parent_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  answers JSONB NOT NULL,
+  score INTEGER NOT NULL DEFAULT 0,
+  total_questions INTEGER NOT NULL DEFAULT 0,
+  quiz_duration_minutes INTEGER,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- Invitation links (toujours liés à une classe)
