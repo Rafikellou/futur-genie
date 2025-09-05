@@ -61,7 +61,7 @@ export function OpenWidgetComponent() {
   return (
     <div className="relative h-full min-h-[600px] bg-gradient-to-br from-slate-800/90 to-slate-700/90 backdrop-blur-sm border border-slate-600/50 rounded-3xl p-8">
       <div className="text-center text-slate-400">
-        <p>Outil de feedback en cours de chargement...</p>
+        <p>Cliquez sur l'icône ? pour nous permettre de nous améliorer.</p>
         <noscript>
           <p>
             Vous devez{' '}

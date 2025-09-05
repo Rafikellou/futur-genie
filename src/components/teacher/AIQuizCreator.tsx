@@ -313,6 +313,28 @@ export function AIQuizCreator() {
         })
       }
       
+      // If publishing, update publication dates via API
+      if (publish) {
+        try {
+          const publishResponse = await fetch('/api/quizzes/publish', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              quizId: createdQuiz.id,
+              isPublished: true
+            }),
+          })
+          
+          if (!publishResponse.ok) {
+            console.warn('Failed to update publication dates, but quiz was created')
+          }
+        } catch (publishError) {
+          console.warn('Error updating publication dates:', publishError)
+        }
+      }
+      
       const statusText = publish ? 'publié' : 'sauvegardé en brouillon'
       setSuccess(`Quiz "${quizTitle}" ${statusText} avec succès !`)
       addMessage('assistant', `✅ Parfait ! Le quiz "${quizTitle}" a été ${statusText}. Vous pouvez retrouver ce quiz dans l'espace "Mes Quiz" de votre tableau de bord.`)
@@ -421,35 +443,6 @@ export function AIQuizCreator() {
                       {/* Inline Quiz Display */}
                       {message.quiz && (
                         <div className="mt-4 space-y-4">
-                          {/* Quiz Header */}
-                          <div className="bg-gradient-to-r from-slate-600/50 to-slate-500/50 backdrop-blur-sm border border-slate-500/30 rounded-xl p-4 space-y-3">
-                            <div className="flex items-center space-x-3">
-                              <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg flex items-center justify-center">
-                                <Sparkles className="h-4 w-4 text-white" />
-                              </div>
-                              <div>
-                                <h3 className="text-lg font-bold text-white">{message.quiz.title}</h3>
-                                <p className="text-slate-300 text-sm">{message.quiz.description}</p>
-                              </div>
-                            </div>
-                            
-                            {/* Quiz Metadata */}
-                            <div className="flex items-center space-x-4 text-sm">
-                              <div className="flex items-center space-x-2">
-                                <div className="w-6 h-6 bg-gradient-to-r from-green-500 to-emerald-500 rounded-lg flex items-center justify-center">
-                                  <span className="text-xs font-bold text-white">{message.quiz.questions.length}</span>
-                                </div>
-                                <span className="text-slate-300">Questions</span>
-                              </div>
-                              {selectedClassroom && (
-                                <div className="flex items-center space-x-2">
-                                  <Badge className="bg-gradient-to-r from-blue-600 to-purple-600 text-white border-0 px-2 py-1 text-xs">
-                                    {classrooms.find(c => c.id === selectedClassroom)?.grade}
-                                  </Badge>
-                                </div>
-                              )}
-                            </div>
-                          </div>
                           
                           {/* Quiz Questions */}
                           <div className="space-y-4">

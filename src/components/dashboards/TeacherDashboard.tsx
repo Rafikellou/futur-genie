@@ -284,7 +284,7 @@ export function TeacherDashboard() {
           <div className="relative hidden lg:block">
             <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-purple-600/20 rounded-3xl blur-3xl"></div>
             <div className="relative bg-gradient-to-r from-slate-800/90 to-slate-700/90 backdrop-blur-sm border border-slate-600/50 rounded-3xl p-2">
-              <div className="grid grid-cols-4 gap-2">
+              <div className="grid grid-cols-5 gap-2">
                 <button 
                   className={`px-6 py-4 rounded-2xl text-sm font-semibold transition-all duration-300 flex items-center justify-center space-x-2 ${
                     activeTab === 'ai-quiz' 
@@ -294,7 +294,7 @@ export function TeacherDashboard() {
                   onClick={() => setActiveTab('ai-quiz')}
                 >
                   <Bot className="h-4 w-4" />
-                  <span>Créer un Quiz</span>
+                  <span>Créer Quiz</span>
                 </button>
                 <button 
                   className={`px-6 py-4 rounded-2xl text-sm font-semibold transition-all duration-300 flex items-center justify-center space-x-2 ${
@@ -309,17 +309,6 @@ export function TeacherDashboard() {
                 </button>
                 <button 
                   className={`px-6 py-4 rounded-2xl text-sm font-semibold transition-all duration-300 flex items-center justify-center space-x-2 ${
-                    activeTab === 'suggestions' 
-                      ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg shadow-blue-600/25 scale-105' 
-                      : 'text-slate-300 hover:text-white hover:bg-slate-600/50 hover:scale-102'
-                  }`} 
-                  onClick={() => setActiveTab('suggestions')}
-                >
-                  <MessageSquare className="h-4 w-4" />
-                  <span>Suggestions</span>
-                </button>
-                <button 
-                  className={`px-6 py-4 rounded-2xl text-sm font-semibold transition-all duration-300 flex items-center justify-center space-x-2 ${
                     activeTab === 'overview' 
                       ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg shadow-blue-600/25 scale-105' 
                       : 'text-slate-300 hover:text-white hover:bg-slate-600/50 hover:scale-102'
@@ -328,6 +317,28 @@ export function TeacherDashboard() {
                 >
                   <TrendingUp className="h-4 w-4" />
                   <span>Analyse</span>
+                </button>
+                <button 
+                  className={`px-6 py-4 rounded-2xl text-sm font-semibold transition-all duration-300 flex items-center justify-center space-x-2 ${
+                    activeTab === 'classroom' 
+                      ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg shadow-blue-600/25 scale-105' 
+                      : 'text-slate-300 hover:text-white hover:bg-slate-600/50 hover:scale-102'
+                  }`} 
+                  onClick={() => setActiveTab('classroom')}
+                >
+                  <Users className="h-4 w-4" />
+                  <span>Ma Classe</span>
+                </button>
+                <button 
+                  className={`px-6 py-4 rounded-2xl text-sm font-semibold transition-all duration-300 flex items-center justify-center space-x-2 ${
+                    activeTab === 'suggestions' 
+                      ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg shadow-blue-600/25 scale-105' 
+                      : 'text-slate-300 hover:text-white hover:bg-slate-600/50 hover:scale-102'
+                  }`} 
+                  onClick={() => setActiveTab('suggestions')}
+                >
+                  <MessageSquare className="h-4 w-4" />
+                  <span>Suggestions</span>
                 </button>
               </div>
             </div>
