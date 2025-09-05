@@ -104,8 +104,13 @@ export function AIQuizCreator() {
   const [isSaving, setIsSaving] = useState(false)
   
   // AI Model state
-  const [aiModel, setAiModel] = useState<'gpt-4o-mini' | 'gpt-4o'>('gpt-4o-mini')
+  const [aiModel, setAiModel] = useState<'gpt-5-mini' | 'gpt-5'>('gpt-5-mini')
   const [hasInteracted, setHasInteracted] = useState(false)
+  
+  // Success popup state
+  const [showPopup, setShowPopup] = useState(false)
+  const [popupMessage, setPopupMessage] = useState('')
+  const [popupIsPublished, setPopupIsPublished] = useState(false)
 
   useEffect(() => {
     if (profile?.id) {
@@ -230,7 +235,7 @@ export function AIQuizCreator() {
       setQuizDescription(quiz.description)
       
       // Add assistant response with quiz data
-      const modelText = aiModel === 'gpt-4o' ? ' (Intelligence boostée)' : ''
+      const modelText = aiModel === 'gpt-5' ? ' (Intelligence boostée)' : ''
       addMessage('assistant', `J'ai généré un quiz "${quiz.title}" avec ${quiz.questions.length} questions basées sur votre leçon${modelText} :`, quiz)
       
     } catch (error: any) {
@@ -355,7 +360,15 @@ export function AIQuizCreator() {
       }
       
       const statusText = publish ? 'publié' : 'sauvegardé en brouillon'
-      setSuccess(`Quiz "${quizTitle}" ${statusText} avec succès !`)
+      
+      // Show modern success popup
+      setPopupMessage(`Quiz "${quizTitle}" ${statusText} avec succès !`)
+      setPopupIsPublished(publish)
+      setShowPopup(true)
+      
+      // Auto-hide popup after 5 seconds
+      setTimeout(() => setShowPopup(false), 5000)
+      
       addMessage('assistant', `✅ Parfait ! Le quiz "${quizTitle}" a été ${statusText}. Vous pouvez retrouver ce quiz dans l'espace "Mes Quiz" de votre tableau de bord.`)
       
       // Reset form
@@ -427,7 +440,7 @@ export function AIQuizCreator() {
         {/* Chat Interface - Full screen adaptation */}
         <div className="relative h-full">
           <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 to-purple-600/10 rounded-2xl sm:rounded-3xl blur-2xl"></div>
-          <div className="relative bg-gradient-to-br from-slate-800/90 to-slate-700/90 backdrop-blur-sm border border-slate-600/50 rounded-2xl sm:rounded-3xl overflow-hidden flex flex-col" style={{ height: 'calc(100vh - 320px)', minHeight: '400px', maxHeight: '600px' }}>
+          <div className="relative bg-gradient-to-br from-slate-800/90 to-slate-700/90 backdrop-blur-sm border border-slate-600/50 rounded-2xl sm:rounded-3xl overflow-hidden flex flex-col" style={{ height: 'calc(100vh - 200px)', minHeight: '400px', maxHeight: '700px' }}>
             
             {/* Messages */}
             <div className="flex-1 overflow-y-auto p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6 custom-scrollbar">
@@ -606,24 +619,7 @@ export function AIQuizCreator() {
             </div>
             
             {/* Input Area */}
-            <div className="bg-gradient-to-r from-slate-700/80 to-slate-600/80 backdrop-blur-sm border-t border-slate-600/50 p-4 space-y-4">
-              {/* AI Model Boost Button */}
-              {hasInteracted && (
-                <div className="flex justify-center">
-                  <Button 
-                    onClick={() => setAiModel(aiModel === 'gpt-4o-mini' ? 'gpt-4o' : 'gpt-4o-mini')}
-                    className={`${
-                      aiModel === 'gpt-4o' 
-                        ? 'bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600' 
-                        : 'bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800'
-                    } text-white px-4 py-2 text-sm font-medium shadow-lg transition-all duration-300 hover:scale-105 border-0`}
-                  >
-                    <Zap className="h-4 w-4 mr-2" />
-                    {aiModel === 'gpt-4o-mini' ? 'Augmenter mon intelligence' : 'Intelligence boostée ✨'}
-                  </Button>
-                </div>
-              )}
-              
+            <div className="bg-gradient-to-r from-slate-700/80 to-slate-600/80 backdrop-blur-sm border-t border-slate-600/50 p-4">
               <div className="relative">
                 <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4">
                   <div className="flex-1 relative">
@@ -641,13 +637,29 @@ export function AIQuizCreator() {
                       rows={3}
                     />
                   </div>
-                  <Button 
-                    onClick={handleSendMessage}
-                    disabled={!userInput.trim() || isGenerating}
-                    className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-3 text-base font-medium shadow-lg transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:hover:scale-100"
-                  >
-                    <Send className="h-5 w-5" />
-                  </Button>
+                  <div className="flex flex-col space-y-2">
+                    {/* AI Model Boost Button */}
+                    {hasInteracted && (
+                      <Button 
+                        onClick={() => setAiModel(aiModel === 'gpt-5-mini' ? 'gpt-5' : 'gpt-5-mini')}
+                        className={`${
+                          aiModel === 'gpt-5' 
+                            ? 'bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600' 
+                            : 'bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800'
+                        } text-white px-3 py-2 text-xs font-medium shadow-lg transition-all duration-300 hover:scale-105 border-0`}
+                      >
+                        <Zap className="h-3 w-3 mr-1" />
+                        {aiModel === 'gpt-5-mini' ? 'Boost' : 'Boosté ✨'}
+                      </Button>
+                    )}
+                    <Button 
+                      onClick={handleSendMessage}
+                      disabled={!userInput.trim() || isGenerating}
+                      className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-3 text-base font-medium shadow-lg transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:hover:scale-100"
+                    >
+                      <Send className="h-5 w-5" />
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -655,6 +667,49 @@ export function AIQuizCreator() {
         </div>
       </div>
     </div>
+    
+    {/* Modern Success Popup */}
+    {showPopup && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+        <div className="bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-600/50 rounded-2xl p-6 max-w-md w-full shadow-2xl transform animate-in slide-in-from-bottom-4 duration-300">
+          <div className="text-center space-y-4">
+            <div className={`w-16 h-16 mx-auto rounded-full flex items-center justify-center ${
+              popupIsPublished 
+                ? 'bg-gradient-to-r from-green-500 to-emerald-500' 
+                : 'bg-gradient-to-r from-blue-500 to-cyan-500'
+            }`}>
+              {popupIsPublished ? (
+                <Globe className="h-8 w-8 text-white" />
+              ) : (
+                <Save className="h-8 w-8 text-white" />
+              )}
+            </div>
+            
+            <div className="space-y-2">
+              <h3 className="text-xl font-bold text-white">
+                {popupIsPublished ? 'Quiz Publié !' : 'Quiz Sauvegardé !'}
+              </h3>
+              <p className="text-slate-300 text-sm leading-relaxed">
+                {popupMessage}
+              </p>
+              {popupIsPublished && (
+                <p className="text-green-400 text-xs">
+                  ✨ Vos élèves peuvent maintenant accéder au quiz
+                </p>
+              )}
+            </div>
+            
+            <Button 
+              onClick={() => setShowPopup(false)}
+              className="bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800 text-white px-6 py-2 text-sm font-medium shadow-lg transition-all duration-300 hover:scale-105 border-0"
+            >
+              Parfait !
+            </Button>
+          </div>
+        </div>
+      </div>
+    )}
+    
     </>
   )
 }

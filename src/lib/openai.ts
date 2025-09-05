@@ -20,7 +20,7 @@ export interface GeneratedQuiz {
   questions: QuizQuestion[]
 }
 
-export async function generateQuizFromLesson(lessonDescription: string, gradeLevel: string, aiModel: 'gpt-4o-mini' | 'gpt-4o' = 'gpt-4o-mini'): Promise<GeneratedQuiz> {
+export async function generateQuizFromLesson(lessonDescription: string, gradeLevel: string, aiModel: 'gpt-5-mini' | 'gpt-5' = 'gpt-5-mini'): Promise<GeneratedQuiz> {
   try {
     const prompt = `Tu es un enseignant expert. Génère un quiz de 10 questions à choix multiples basé sur la leçon suivante pour des élèves de niveau ${gradeLevel}.
 
@@ -30,6 +30,7 @@ Instructions:
 - Crée exactement 10 questions variées (compréhension, application, analyse)
 - Chaque question doit avoir 4 choix de réponse (A, B, C, D)
 - Une seule réponse correcte par question
+- IMPORTANT: Mélange aléatoirement la position des bonnes réponses (A, B, C ou D) - évite de toujours mettre la bonne réponse en position A
 - Questions progressives en difficulté
 - Adaptées au niveau ${gradeLevel}
 - En français
@@ -54,25 +55,51 @@ Réponds UNIQUEMENT avec un JSON valide dans ce format exact:
   ]
 }`
 
-    const completion = await openai.chat.completions.create({
+    const completion = await openai.responses.create({
       model: aiModel,
-      messages: [
-        {
-          role: "system",
-          content: "Tu es un assistant spécialisé dans la création de quiz éducatifs. Tu réponds UNIQUEMENT avec du JSON valide, sans texte supplémentaire."
-        },
+      instructions: "Tu es un assistant spécialisé dans la création de quiz éducatifs. Tu réponds UNIQUEMENT avec du JSON valide, sans texte supplémentaire.",
+      input: [
         {
           role: "user",
           content: prompt
         }
       ],
-      temperature: 0.7,
-      max_tokens: 3000,
+      max_output_tokens: 3000
     })
 
-    const response = completion.choices[0]?.message?.content?.trim()
+    console.log('OpenAI completion response for model', aiModel, ':', completion)
+    console.log('Full completion object:', JSON.stringify(completion, null, 2))
+    
+    // Try multiple ways to extract the response
+    let response = completion.output_text?.trim()
+    
+    // Fallback for different response structures
+    if (!response && (completion as any).choices?.[0]?.message?.content) {
+      response = (completion as any).choices[0].message.content.trim()
+      console.log('Using fallback: choices[0].message.content')
+    }
+    
+    if (!response && (completion as any).text) {
+      response = (completion as any).text.trim()
+      console.log('Using fallback: completion.text')
+    }
+    
+    if (!response && (completion as any).content) {
+      response = (completion as any).content.trim()
+      console.log('Using fallback: completion.content')
+    }
+    
+    console.log('Final extracted response for model', aiModel, ':', response)
+    console.log('Response type:', typeof response, 'Length:', response?.length)
     
     if (!response) {
+      console.error('No response from OpenAI after all fallbacks:', {
+        completion,
+        output_text: completion.output_text,
+        choices: (completion as any).choices,
+        text: (completion as any).text,
+        content: (completion as any).content
+      })
       throw new Error('Aucune réponse reçue de l\'IA')
     }
 
@@ -127,7 +154,7 @@ Réponds UNIQUEMENT avec un JSON valide dans ce format exact:
   }
 }
 
-export async function improveQuizQuestions(currentQuestions: QuizQuestion[], feedback: string, gradeLevel: string, aiModel: 'gpt-4o-mini' | 'gpt-4o' = 'gpt-4o-mini'): Promise<QuizQuestion[]> {
+export async function improveQuizQuestions(currentQuestions: QuizQuestion[], feedback: string, gradeLevel: string, aiModel: 'gpt-5-mini' | 'gpt-5' = 'gpt-5-mini'): Promise<QuizQuestion[]> {
   try {
     const prompt = `Tu es un enseignant expert. Améliore ces questions de quiz selon les commentaires fournis.
 
@@ -161,25 +188,51 @@ Réponds UNIQUEMENT avec un JSON valide contenant le tableau de questions améli
   }
 ]`
 
-    const completion = await openai.chat.completions.create({
+    const completion = await openai.responses.create({
       model: aiModel,
-      messages: [
-        {
-          role: "system",
-          content: "Tu es un assistant spécialisé dans l'amélioration de quiz éducatifs. Tu réponds UNIQUEMENT avec du JSON valide."
-        },
+      instructions: "Tu es un assistant spécialisé dans l'amélioration de quiz éducatifs. Tu réponds UNIQUEMENT avec du JSON valide.",
+      input: [
         {
           role: "user",
           content: prompt
         }
       ],
-      temperature: 0.7,
-      max_tokens: 3000,
+      max_output_tokens: 3000
     })
 
-    const response = completion.choices[0]?.message?.content?.trim()
+    console.log('OpenAI completion response for model', aiModel, ':', completion)
+    console.log('Full completion object:', JSON.stringify(completion, null, 2))
+    
+    // Try multiple ways to extract the response
+    let response = completion.output_text?.trim()
+    
+    // Fallback for different response structures
+    if (!response && (completion as any).choices?.[0]?.message?.content) {
+      response = (completion as any).choices[0].message.content.trim()
+      console.log('Using fallback: choices[0].message.content')
+    }
+    
+    if (!response && (completion as any).text) {
+      response = (completion as any).text.trim()
+      console.log('Using fallback: completion.text')
+    }
+    
+    if (!response && (completion as any).content) {
+      response = (completion as any).content.trim()
+      console.log('Using fallback: completion.content')
+    }
+    
+    console.log('Final extracted response for model', aiModel, ':', response)
+    console.log('Response type:', typeof response, 'Length:', response?.length)
     
     if (!response) {
+      console.error('No response from OpenAI after all fallbacks:', {
+        completion,
+        output_text: completion.output_text,
+        choices: (completion as any).choices,
+        text: (completion as any).text,
+        content: (completion as any).content
+      })
       throw new Error('Aucune réponse reçue de l\'IA')
     }
 
