@@ -76,7 +76,7 @@ export function AIQuizCreator() {
     {
       id: '1',
       role: 'assistant',
-      content: 'Bonjour, décrivez-moi la leçon du jour, je vous proposerai un quiz dessus',
+      content: 'Bonjour, quelle est la leçon du jour ? Je me charge de créer un quiz pour qu\'ils la retienne en s\'amusant !',
       timestamp: new Date()
     }
   ])
@@ -427,7 +427,7 @@ export function AIQuizCreator() {
         {/* Chat Interface - Full screen adaptation */}
         <div className="relative h-full">
           <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 to-purple-600/10 rounded-2xl sm:rounded-3xl blur-2xl"></div>
-          <div className="relative bg-gradient-to-br from-slate-800/90 to-slate-700/90 backdrop-blur-sm border border-slate-600/50 rounded-2xl sm:rounded-3xl overflow-hidden flex flex-col" style={{ height: 'calc(100vh - 240px)', minHeight: '500px' }}>
+          <div className="relative bg-gradient-to-br from-slate-800/90 to-slate-700/90 backdrop-blur-sm border border-slate-600/50 rounded-2xl sm:rounded-3xl overflow-hidden flex flex-col" style={{ height: 'calc(100vh - 320px)', minHeight: '400px', maxHeight: '600px' }}>
             
             {/* Messages */}
             <div className="flex-1 overflow-y-auto p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6 custom-scrollbar">

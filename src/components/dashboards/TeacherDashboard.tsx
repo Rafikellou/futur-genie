@@ -19,9 +19,11 @@ import {
 } from '@/lib/database'
 import { getTeacherStudents } from '@/lib/database-teacher'
 import { AIQuizCreator } from '@/components/teacher/AIQuizCreator'
-import { AdvancedAnalytics } from '@/components/teacher/AdvancedAnalytics'
+import { TeacherAnalytics } from '@/components/teacher/TeacherAnalytics'
 import { ClassroomManagement } from '@/components/teacher/ClassroomManagement'
 import { ParentInvitationCard } from '@/components/teacher/ParentInvitationCard'
+import { QuizManagement } from '@/components/teacher/QuizManagement'
+import { ParentInvitationPrompt } from '@/components/teacher/ParentInvitationPrompt'
 import { OpenWidgetComponent } from '@/components/ui/OpenWidgetComponent'
 import Link from 'next/link'
 
@@ -92,6 +94,7 @@ export function TeacherDashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [invitationLink, setInvitationLink] = useState<string>('')
   
   // Data state
   const [classrooms, setClassrooms] = useState<Classroom[]>([])
@@ -150,6 +153,12 @@ export function TeacherDashboard() {
       }))
       
       setStudents(transformedStudents as Student[])
+      
+      // Generate invitation link if teacher has classrooms
+      if (classroomsData.length > 0) {
+        const classroomId = classroomsData[0].id
+        setInvitationLink(`${window.location.origin}/invitation?classroom=${classroomId}&role=parent`)
+      }
       
       setError(null)
     } catch (error: any) {
@@ -229,12 +238,6 @@ export function TeacherDashboard() {
                       height={24} 
                       className="sm:w-8 sm:h-8"
                     />
-                  </div>
-                </div>
-                <div className="relative hidden sm:block">
-                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl blur-md opacity-50"></div>
-                  <div className="relative bg-gradient-to-r from-blue-600 to-purple-600 p-3 rounded-xl">
-                    <BookOpen className="h-6 w-6 text-white" />
                   </div>
                 </div>
               </div>
@@ -482,7 +485,7 @@ export function TeacherDashboard() {
           </TabsContent>
           
           <TabsContent value="overview" className="space-y-8">
-            <AdvancedAnalytics />
+            <TeacherAnalytics />
           </TabsContent>
           
           <TabsContent value="classroom">
@@ -491,125 +494,12 @@ export function TeacherDashboard() {
           
           
           <TabsContent value="quizzes">
-            <div className="space-y-6">
-              
-              {quizzes.length === 0 ? (
-                activeTab === 'quizzes' ? (
-                  <div className="relative">
-                    <div className="absolute inset-0 bg-gradient-to-br from-purple-600/10 to-pink-600/10 rounded-3xl blur-2xl"></div>
-                    <div className="relative bg-gradient-to-br from-slate-800/90 to-slate-700/90 backdrop-blur-sm border border-slate-600/50 rounded-3xl overflow-hidden">
-                      <div className="flex items-center justify-center py-20">
-                        <div className="text-center space-y-6">
-                          <div className="relative">
-                            <div className="absolute inset-0 bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-3xl blur-2xl"></div>
-                            <div className="relative bg-gradient-to-r from-slate-700/50 to-slate-600/50 backdrop-blur-sm border border-slate-600/30 rounded-3xl p-12">
-                              <div className="w-20 h-20 bg-gradient-to-r from-purple-600 to-pink-600 rounded-3xl flex items-center justify-center mx-auto mb-6">
-                                <FileText className="h-10 w-10 text-white" />
-                              </div>
-                              <h3 className="text-2xl font-bold text-white mb-3">Aucun quiz créé</h3>
-                              <p className="text-slate-400 text-lg leading-relaxed max-w-md mx-auto mb-8">
-                                Commencez par créer votre premier quiz avec l'assistant Futur Génie
-                              </p>
-                              <Button 
-                                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white border-0 shadow-lg shadow-blue-600/25 transition-all duration-300 hover:scale-105"
-                                onClick={() => setActiveTab('ai-quiz')}
-                              >
-                                <Plus className="h-5 w-5 mr-2" />
-                                Créer mon premier quiz
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ) : null
-              ) : (
-                <div className="space-y-4">
-                  {/* Sort quizzes: published first, then drafts */}
-                  {[...quizzes].sort((a, b) => {
-                    if (a.is_published && !b.is_published) return -1
-                    if (!a.is_published && b.is_published) return 1
-                    return 0
-                  }).map((quiz) => {
-                    const formatUnpublishDate = (dateStr: string) => {
-                      const date = new Date(dateStr)
-                      return date.toLocaleDateString('fr-FR', {
-                        day: 'numeric',
-                        month: 'short',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })
-                    }
-                    
-                    const isExpiringSoon = (dateStr: string) => {
-                      const expiry = new Date(dateStr)
-                      const now = new Date()
-                      const hoursUntilExpiry = (expiry.getTime() - now.getTime()) / (1000 * 60 * 60)
-                      return hoursUntilExpiry <= 24 && hoursUntilExpiry > 0
-                    }
-                    
-                    return (
-                      <div key={quiz.id} className="group relative">
-                        <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 hover:bg-slate-800/70 transition-all duration-200">
-                          <div className="flex items-center justify-between">
-                            <div className="flex-1">
-                              <h3 className="text-white font-medium text-base mb-2">
-                                {quiz.title}
-                              </h3>
-                              
-                              {quiz.is_published ? (
-                                <div className="text-sm text-slate-300">
-                                  {quiz.unpublish_at && (
-                                    <span className={isExpiringSoon(quiz.unpublish_at) ? 'text-amber-400' : 'text-slate-300'}>
-                                      En ligne jusqu'au {formatUnpublishDate(quiz.unpublish_at)}
-                                    </span>
-                                  )}
-                                </div>
-                              ) : (
-                                <div className="text-sm text-slate-400">
-                                  Brouillon
-                                </div>
-                              )}
-                            </div>
-                            
-                            <div className="flex items-center gap-2 ml-4">
-                              {!quiz.is_published ? (
-                                <Button
-                                  size="sm"
-                                  onClick={() => handlePublishQuiz(quiz.id, quiz.is_published)}
-                                  className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 text-xs"
-                                >
-                                  Publier
-                                </Button>
-                              ) : (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => handlePublishQuiz(quiz.id, quiz.is_published)}
-                                  className="border-slate-600/50 text-slate-400 hover:bg-slate-600/10 hover:border-slate-500 px-3 py-1 text-xs"
-                                >
-                                  Dépublier
-                                </Button>
-                              )}
-                              
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleDeleteQuiz(quiz.id, quiz.title)}
-                                className="border-red-600/50 text-red-400 hover:bg-red-600/10 hover:border-red-500 px-2 py-1"
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
+            <QuizManagement 
+              quizzes={quizzes}
+              onPublishQuiz={handlePublishQuiz}
+              onDeleteQuiz={handleDeleteQuiz}
+              onCreateQuiz={() => setActiveTab('ai-quiz')}
+            />
           </TabsContent>
           
           
@@ -618,6 +508,13 @@ export function TeacherDashboard() {
           </TabsContent>
         </Tabs>
       </main>
+      
+      {/* Parent Invitation Prompt */}
+      <ParentInvitationPrompt
+        hasParents={students.length > 0}
+        invitationLink={invitationLink}
+        onClose={() => {}}
+      />
     </div>
   )
 }
