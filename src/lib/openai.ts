@@ -1,8 +1,18 @@
 import OpenAI from 'openai'
 
+// Initialize OpenAI client for GPT models
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 })
+
+// Initialize DeepSeek client if API key is provided
+let deepSeekClient: OpenAI | null = null
+if (process.env.DEEPSEEK_API_KEY) {
+  deepSeekClient = new OpenAI({
+    apiKey: process.env.DEEPSEEK_API_KEY,
+    baseURL: 'https://api.deepseek.com/v1',
+  })
+}
 
 export interface QuizQuestion {
   question: string
@@ -20,7 +30,58 @@ export interface GeneratedQuiz {
   questions: QuizQuestion[]
 }
 
-export async function generateQuizFromLesson(lessonDescription: string, gradeLevel: string, aiModel: 'gpt-5-mini' | 'gpt-5' = 'gpt-5-mini'): Promise<GeneratedQuiz> {
+// Type for supported AI models
+type AIModel = 'gpt-4o-mini' | 'gpt-4o' | 'deepseek-chat'
+
+// Updated function to support multiple AI providers
+async function callAIProvider(
+  prompt: string, 
+  aiModel: AIModel, 
+  instructions: string
+): Promise<any> {
+  try {
+    // Try GPT models first
+    if (aiModel === 'gpt-4o-mini' || aiModel === 'gpt-4o') {
+      const completion = await openai.chat.completions.create({
+        model: aiModel,
+        messages: [
+          { role: "system", content: instructions },
+          { role: "user", content: prompt }
+        ],
+        max_completion_tokens: 3000,
+        temperature: 0.7
+      })
+      
+      return completion
+    }
+    
+    // Try DeepSeek if available
+    if (aiModel === 'deepseek-chat' && deepSeekClient) {
+      const completion = await deepSeekClient.chat.completions.create({
+        model: 'deepseek-chat',
+        messages: [
+          { role: "system", content: instructions },
+          { role: "user", content: prompt }
+        ],
+        max_completion_tokens: 3000,
+        temperature: 1 // DeepSeek only supports default temperature value of 1
+      })
+      
+      return completion
+    }
+    
+    throw new Error('Modèle IA non supporté ou clé API manquante')
+  } catch (error) {
+    console.error(`AI Provider Error (${aiModel}):`, error)
+    throw error
+  }
+}
+
+export async function generateQuizFromLesson(
+  lessonDescription: string, 
+  gradeLevel: string, 
+  aiModel: AIModel = 'gpt-4o-mini'
+): Promise<GeneratedQuiz> {
   try {
     const prompt = `Tu es un enseignant expert. Génère un quiz de 10 questions à choix multiples basé sur la leçon suivante pour des élèves de niveau ${gradeLevel}.
 
@@ -55,50 +116,22 @@ Réponds UNIQUEMENT avec un JSON valide dans ce format exact:
   ]
 }`
 
-    const completion = await openai.responses.create({
-      model: aiModel,
-      instructions: "Tu es un assistant spécialisé dans la création de quiz éducatifs. Tu réponds UNIQUEMENT avec du JSON valide, sans texte supplémentaire.",
-      input: [
-        {
-          role: "user",
-          content: prompt
-        }
-      ],
-      max_output_tokens: 3000
-    })
+    const completion = await callAIProvider(
+      prompt,
+      aiModel,
+      "Tu es un assistant spécialisé dans la création de quiz éducatifs. Tu réponds UNIQUEMENT avec du JSON valide, sans texte supplémentaire."
+    )
 
-    console.log('OpenAI completion response for model', aiModel, ':', completion)
+    console.log('AI completion response for model', aiModel, ':', completion)
     console.log('Full completion object:', JSON.stringify(completion, null, 2))
     
-    // Try multiple ways to extract the response
-    let response = completion.output_text?.trim()
-    
-    // Fallback for different response structures
-    if (!response && (completion as any).choices?.[0]?.message?.content) {
-      response = (completion as any).choices[0].message.content.trim()
-      console.log('Using fallback: choices[0].message.content')
-    }
-    
-    if (!response && (completion as any).text) {
-      response = (completion as any).text.trim()
-      console.log('Using fallback: completion.text')
-    }
-    
-    if (!response && (completion as any).content) {
-      response = (completion as any).content.trim()
-      console.log('Using fallback: completion.content')
-    }
-    
-    console.log('Final extracted response for model', aiModel, ':', response)
-    console.log('Response type:', typeof response, 'Length:', response?.length)
+    // Extract response content
+    let response = completion.choices?.[0]?.message?.content?.trim()
     
     if (!response) {
-      console.error('No response from OpenAI after all fallbacks:', {
+      console.error('No response from AI after all fallbacks:', {
         completion,
-        output_text: completion.output_text,
-        choices: (completion as any).choices,
-        text: (completion as any).text,
-        content: (completion as any).content
+        choices: completion.choices
       })
       throw new Error('Aucune réponse reçue de l\'IA')
     }
@@ -140,10 +173,10 @@ Réponds UNIQUEMENT avec un JSON valide dans ce format exact:
     return parsedQuiz
 
   } catch (error: any) {
-    console.error('OpenAI API Error:', error)
+    console.error('AI API Error:', error)
     
     if (error.message?.includes('API key')) {
-      throw new Error('Clé API OpenAI non configurée. Veuillez contacter l\'administrateur.')
+      throw new Error('Clé API IA non configurée. Veuillez contacter l\'administrateur.')
     }
     
     if (error.message?.includes('quota')) {
@@ -154,7 +187,12 @@ Réponds UNIQUEMENT avec un JSON valide dans ce format exact:
   }
 }
 
-export async function improveQuizQuestions(currentQuestions: QuizQuestion[], feedback: string, gradeLevel: string, aiModel: 'gpt-5-mini' | 'gpt-5' = 'gpt-5-mini'): Promise<QuizQuestion[]> {
+export async function improveQuizQuestions(
+  currentQuestions: QuizQuestion[], 
+  feedback: string, 
+  gradeLevel: string, 
+  aiModel: AIModel = 'gpt-4o-mini'
+): Promise<QuizQuestion[]> {
   try {
     const prompt = `Tu es un enseignant expert. Améliore ces questions de quiz selon les commentaires fournis.
 
@@ -188,50 +226,22 @@ Réponds UNIQUEMENT avec un JSON valide contenant le tableau de questions améli
   }
 ]`
 
-    const completion = await openai.responses.create({
-      model: aiModel,
-      instructions: "Tu es un assistant spécialisé dans l'amélioration de quiz éducatifs. Tu réponds UNIQUEMENT avec du JSON valide.",
-      input: [
-        {
-          role: "user",
-          content: prompt
-        }
-      ],
-      max_output_tokens: 3000
-    })
+    const completion = await callAIProvider(
+      prompt,
+      aiModel,
+      "Tu es un assistant spécialisé dans l'amélioration de quiz éducatifs. Tu réponds UNIQUEMENT avec du JSON valide."
+    )
 
-    console.log('OpenAI completion response for model', aiModel, ':', completion)
+    console.log('AI completion response for model', aiModel, ':', completion)
     console.log('Full completion object:', JSON.stringify(completion, null, 2))
     
-    // Try multiple ways to extract the response
-    let response = completion.output_text?.trim()
-    
-    // Fallback for different response structures
-    if (!response && (completion as any).choices?.[0]?.message?.content) {
-      response = (completion as any).choices[0].message.content.trim()
-      console.log('Using fallback: choices[0].message.content')
-    }
-    
-    if (!response && (completion as any).text) {
-      response = (completion as any).text.trim()
-      console.log('Using fallback: completion.text')
-    }
-    
-    if (!response && (completion as any).content) {
-      response = (completion as any).content.trim()
-      console.log('Using fallback: completion.content')
-    }
-    
-    console.log('Final extracted response for model', aiModel, ':', response)
-    console.log('Response type:', typeof response, 'Length:', response?.length)
+    // Extract response content
+    let response = completion.choices?.[0]?.message?.content?.trim()
     
     if (!response) {
-      console.error('No response from OpenAI after all fallbacks:', {
+      console.error('No response from AI after all fallbacks:', {
         completion,
-        output_text: completion.output_text,
-        choices: (completion as any).choices,
-        text: (completion as any).text,
-        content: (completion as any).content
+        choices: completion.choices
       })
       throw new Error('Aucune réponse reçue de l\'IA')
     }
@@ -267,7 +277,7 @@ Réponds UNIQUEMENT avec un JSON valide contenant le tableau de questions améli
     return improvedQuestions
 
   } catch (error: any) {
-    console.error('OpenAI API Error:', error)
+    console.error('AI API Error:', error)
     throw new Error(error.message || 'Erreur lors de l\'amélioration du quiz')
   }
 }
