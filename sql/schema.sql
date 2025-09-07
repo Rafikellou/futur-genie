@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS public.users (
   classroom_id     uuid REFERENCES public.classrooms(id) ON DELETE SET NULL, -- requis pour TEACHER/PARENT
   email            text,
   full_name        text,
-  child_first_name text,  -- champ informatif pour le parent
+  child_first_name text,  -- Le prénom de l'enfant
   created_at       timestamptz NOT NULL DEFAULT timezone('utc'::text, now()),
   CONSTRAINT teacher_must_have_classroom CHECK (role <> 'TEACHER' OR classroom_id IS NOT NULL),
   CONSTRAINT parent_must_have_classroom  CHECK (role <> 'PARENT'  OR classroom_id IS NOT NULL)
@@ -60,8 +60,8 @@ CREATE TABLE IF NOT EXISTS public.quizzes (
   classroom_id  uuid NOT NULL REFERENCES public.classrooms(id) ON DELETE CASCADE,
   school_id     uuid NOT NULL REFERENCES public.schools(id) ON DELETE CASCADE,
   is_published  boolean NOT NULL DEFAULT false,
-  published_at  timestamptz,
-  unpublish_at  timestamptz,
+  published_at  timestamptz, -- Timestamp when the quiz was published
+  unpublish_at  timestamptz, -- Timestamp when the quiz should be automatically unpublished (typically 7 days after publication)
   created_at    timestamptz NOT NULL DEFAULT timezone('utc'::text, now())
 );
 
@@ -79,15 +79,19 @@ CREATE TABLE IF NOT EXISTS public.quiz_items (
 );
 
 -- Submissions (réponses des parents)
-CREATE TABLE public.submissions (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  quiz_id UUID NOT NULL REFERENCES public.quizzes(id) ON DELETE CASCADE,
-  parent_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-  answers JSONB NOT NULL,
-  score INTEGER NOT NULL DEFAULT 0,
-  total_questions INTEGER NOT NULL DEFAULT 0,
-  quiz_duration_minutes INTEGER,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+CREATE TABLE IF NOT EXISTS public.submissions (
+  id            uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  quiz_id       uuid NOT NULL REFERENCES public.quizzes(id) ON DELETE CASCADE,
+  parent_id     uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  answers       jsonb NOT NULL,
+  score         integer NOT NULL DEFAULT 0,
+  total_questions integer NOT NULL DEFAULT 0,
+  school_id     uuid NOT NULL REFERENCES public.schools(id) ON DELETE CASCADE,
+  classroom_id  uuid NOT NULL REFERENCES public.classrooms(id) ON DELETE CASCADE,
+  created_at    timestamptz NOT NULL DEFAULT timezone('utc'::text, now()),
+  started_at    timestamptz, -- Quand est-ce que le quiz a commencé
+  completed_at  timestamptz, -- Quand est-ce que le quiz a été finalisé
+  quiz_duration_minutes integer -- Durée du quiz en minutes, calculée au moment de la soumission
 );
 
 -- Invitation links (toujours liés à une classe)
@@ -95,7 +99,7 @@ CREATE TABLE IF NOT EXISTS public.invitation_links (
   id           uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   school_id    uuid NOT NULL REFERENCES public.schools(id) ON DELETE CASCADE,
   classroom_id uuid NOT NULL REFERENCES public.classrooms(id) ON DELETE CASCADE,
-  intended_role user_role NOT NULL, -- Store the intended role for the invitation
+  intended_role user_role NOT NULL, -- Rôle prévu pour l'utilisateur qui acceptera cette invitation
   token        text NOT NULL UNIQUE,
   expires_at   timestamptz NOT NULL,
   used_at      timestamptz,
