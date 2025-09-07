@@ -24,6 +24,7 @@ import {
   Award,
   Activity
 } from 'lucide-react'
+import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { ClassroomManagement } from '@/components/director/ClassroomManagement'
 import { UserManagement } from '@/components/director/UserManagement'
 import { InvitationManagement } from '@/components/director/InvitationManagement'
@@ -111,6 +112,30 @@ export function DirectorDashboard() {
     return `Il y a ${diffInDays}j`
   }
 
+  // Navigation items for director dashboard
+  const navigationItems = [
+    {
+      id: 'overview',
+      label: 'Vue d\'ensemble',
+      icon: TrendingUp
+    },
+    {
+      id: 'classrooms',
+      label: 'Classes',
+      icon: School
+    },
+    {
+      id: 'users',
+      label: 'Utilisateurs',
+      icon: Users
+    },
+    {
+      id: 'invitations',
+      label: 'Invitations',
+      icon: LinkIcon
+    }
+  ]
+
   // Full-screen loader when profile is not yet available (initial app load)
   if (!profile) {
     return (
@@ -121,53 +146,16 @@ export function DirectorDashboard() {
   }
 
   return (
-    <div className="min-h-screen" style={{ background: 'var(--background)' }}>
-      <header className="card-secondary border-b-0 rounded-none">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center">
-            <div className="flex items-center mr-4">
-              <Image 
-                src="/logo-principal.png" 
-                alt="Futur Génie" 
-                width={40} 
-                height={40} 
-                className="mr-3"
-              />
-              <div className="gradient-primary p-2 rounded-lg">
-                <Shield className="h-6 w-6 text-white" />
-              </div>
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-white">Tableau de Bord Directeur</h1>
-              <div className="flex items-center gap-2 text-sm text-slate-400">
-                <span>{profile?.full_name}</span>
-                {schoolName && (
-                  <>
-                    <span>•</span>
-                    <span className="text-blue-400 font-medium">{schoolName}</span>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-          <button className="btn-gradient gradient-primary hover-lift px-4 py-2 rounded-lg text-white font-medium text-sm transition-all duration-200 flex items-center gap-2" onClick={signOut}>
-            <LogOut className="h-4 w-4" /> Déconnexion
-          </button>
-        </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto px-4 py-8">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <div className="card-secondary p-1 rounded-xl">
-            <div className="grid grid-cols-4 gap-1">
-              <button className={`px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${activeTab === 'overview' ? 'gradient-primary text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-slate-700/50'}`} onClick={() => setActiveTab('overview')}>Vue d'ensemble</button>
-              <button className={`px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${activeTab === 'classrooms' ? 'gradient-primary text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-slate-700/50'}`} onClick={() => setActiveTab('classrooms')}>Classes</button>
-              <button className={`px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${activeTab === 'users' ? 'gradient-primary text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-slate-700/50'}`} onClick={() => setActiveTab('users')}>Utilisateurs</button>
-              <button className={`px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${activeTab === 'invitations' ? 'gradient-primary text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-slate-700/50'}`} onClick={() => setActiveTab('invitations')}>Invitations</button>
-            </div>
-          </div>
-          
-          <TabsContent value="overview" className="space-y-6">
+    <DashboardLayout
+      schoolName={schoolName || undefined}
+      navigationItems={navigationItems}
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+      onSignOut={signOut}
+      userName={profile?.full_name || undefined}
+    >
+      {activeTab === 'overview' && (
+        <div className="space-y-6">
             {error && (
               <div className="card-secondary p-4 rounded-lg border-red-500/20 bg-red-500/10 mb-6">
                 <div className="flex items-center gap-2 text-red-400">
@@ -423,22 +411,20 @@ export function DirectorDashboard() {
                 </div>
               </div>
             </div>
-          </TabsContent>
+        </div>
+      )}
 
-          <TabsContent value="classrooms">
-            <ClassroomManagement />
-          </TabsContent>
+      {activeTab === 'classrooms' && (
+        <ClassroomManagement />
+      )}
 
-          <TabsContent value="users" forceMount>
-            <UserManagement />
-          </TabsContent>
+      {activeTab === 'users' && (
+        <UserManagement />
+      )}
 
-          <TabsContent value="invitations">
-            <InvitationManagement />
-          </TabsContent>
-
-        </Tabs>
-      </main>
-    </div>
+      {activeTab === 'invitations' && (
+        <InvitationManagement />
+      )}
+    </DashboardLayout>
   )
 }

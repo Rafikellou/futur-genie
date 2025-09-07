@@ -35,12 +35,12 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch stats' }, { status: 500 })
     }
 
-    // Calculate statistics
+    // Calculate statistics - Fix score calculation
     const totalQuizzesTaken = submissions?.length || 0
-    const scores = submissions?.map(s => s.score / s.total_questions * 100) || []
-    const averageScore = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0
+    const scorePercentages = submissions?.map(s => (s.score / s.total_questions) * 100) || []
+    const averageScore = scorePercentages.length > 0 ? scorePercentages.reduce((a, b) => a + b, 0) / scorePercentages.length : 0
     const perfectScores = submissions?.filter(s => s.score === s.total_questions).length || 0
-    const bestScore = scores.length > 0 ? Math.max(...scores) : 0
+    const bestScore = scorePercentages.length > 0 ? Math.max(...scorePercentages) : 0
 
     // This week's quizzes
     const oneWeekAgo = new Date()

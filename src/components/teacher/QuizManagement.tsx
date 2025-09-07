@@ -163,22 +163,22 @@ export function QuizManagement({ quizzes, onPublishQuiz, onDeleteQuiz, onCreateQ
   const renderQuizCard = (quiz: Quiz) => (
     <div key={quiz.id} className="group relative">
       <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 hover:bg-slate-800/70 transition-all duration-200">
-        <div className="flex items-center justify-between">
-          <div className="flex-1">
-            <h3 className="text-white font-medium text-base mb-2">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
+          <div className="flex-1 min-w-0">
+            <h3 className="text-white font-medium text-base mb-2 truncate">
               {quiz.title}
             </h3>
             
-            <div className="flex items-center space-x-4 text-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-4 text-sm">
               <div className="flex items-center space-x-1 text-slate-400">
-                <Clock className="h-3 w-3" />
-                <span>{new Date(quiz.created_at).toLocaleDateString('fr-FR')}</span>
+                <Clock className="h-3 w-3 flex-shrink-0" />
+                <span className="whitespace-nowrap">{new Date(quiz.created_at).toLocaleDateString('fr-FR')}</span>
               </div>
               
               {quiz.is_published ? (
-                <div className="text-sm text-slate-300">
+                <div className="text-sm">
                   {quiz.unpublish_at && (
-                    <span className={isExpiringSoon(quiz.unpublish_at) ? 'text-amber-400' : 'text-slate-300'}>
+                    <span className={`${isExpiringSoon(quiz.unpublish_at) ? 'text-amber-400' : 'text-slate-300'} block sm:inline`}>
                       En ligne jusqu'au {formatUnpublishDate(quiz.unpublish_at)}
                     </span>
                   )}
@@ -191,7 +191,7 @@ export function QuizManagement({ quizzes, onPublishQuiz, onDeleteQuiz, onCreateQ
             </div>
           </div>
           
-          <div className="flex items-center gap-2 ml-4">
+          <div className="flex items-center justify-end gap-2 flex-shrink-0">
             {!quiz.is_published ? (
               <Button
                 size="sm"

@@ -127,7 +127,7 @@ export function AIQuizCreator() {
 
   // Animated placeholder effect
   useEffect(() => {
-    if (userInput) return // Don't show animation if user is typing
+    if (userInput || hasInteracted) return // Don't show animation if user is typing or has clicked
     
     const currentMessage = placeholderMessages[placeholderIndex]
     let currentIndex = 0
@@ -154,7 +154,7 @@ export function AIQuizCreator() {
     }
     
     typeText()
-  }, [placeholderIndex, userInput])
+  }, [placeholderIndex, userInput, hasInteracted])
 
   const fetchClassrooms = async () => {
     if (!profile?.id) return
@@ -575,17 +575,6 @@ export function AIQuizCreator() {
                               </Button>
                             </div>
                             
-                            {(!selectedClassroom || !quizTitle.trim()) && (
-                              <div className="flex items-center space-x-2 text-amber-400 bg-amber-400/10 px-3 py-2 rounded-lg border border-amber-400/20">
-                                <div className="w-2 h-2 bg-amber-400 rounded-full animate-pulse"></div>
-                                <p className="text-xs">
-                                  {!selectedClassroom && "Sélectionnez une classe"}
-                                  {!selectedClassroom && !quizTitle.trim() && " et "}
-                                  {!quizTitle.trim() && "ajoutez un titre"}
-                                  {" pour activer les boutons de sauvegarde."}
-                                </p>
-                              </div>
-                            )}
                           </div>
                         </div>
                       )}
@@ -621,37 +610,46 @@ export function AIQuizCreator() {
             {/* Input Area */}
             <div className="bg-gradient-to-r from-slate-700/80 to-slate-600/80 backdrop-blur-sm border-t border-slate-600/50 p-4">
               <div className="relative">
-                <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4">
+                <div className="flex flex-col space-y-3">
                   <div className="flex-1 relative">
                     <Textarea
                       placeholder={userInput ? "" : (generatedQuiz ? "Modifications..." : displayText)}
                       value={userInput}
                       onChange={(e) => setUserInput(e.target.value)}
+                      onFocus={() => setHasInteracted(true)}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' && !e.shiftKey) {
                           e.preventDefault()
                           handleSendMessage()
                         }
                       }}
-                      className="bg-slate-800/50 border-slate-600/50 text-white placeholder-slate-400 text-base resize-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all"
-                      rows={3}
+                      className="bg-slate-800/50 border-slate-600/50 text-white placeholder-slate-400 text-base resize-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all min-h-[2.5rem]"
+                      rows={1}
+                      style={{ height: 'auto', minHeight: '2.5rem' }}
+                      onInput={(e) => {
+                        const target = e.target as HTMLTextAreaElement
+                        target.style.height = 'auto'
+                        target.style.height = target.scrollHeight + 'px'
+                      }}
                     />
                   </div>
-                  <div className="flex flex-col space-y-2">
-                    {/* AI Model Boost Button */}
-                    {hasInteracted && (
-                      <Button 
-                        onClick={() => setAiModel(aiModel === 'gpt-5-mini' ? 'gpt-5' : 'gpt-5-mini')}
-                        className={`${
-                          aiModel === 'gpt-5' 
-                            ? 'bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600' 
-                            : 'bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800'
-                        } text-white px-3 py-2 text-xs font-medium shadow-lg transition-all duration-300 hover:scale-105 border-0`}
-                      >
-                        <Zap className="h-3 w-3 mr-1" />
-                        {aiModel === 'gpt-5-mini' ? 'Boost' : 'Boosté ✨'}
-                      </Button>
-                    )}
+                  <div className="flex justify-between items-center">
+                    <div className="flex space-x-2">
+                      {/* AI Model Boost Button */}
+                      {hasInteracted && (
+                        <Button 
+                          onClick={() => setAiModel(aiModel === 'gpt-5-mini' ? 'gpt-5' : 'gpt-5-mini')}
+                          className={`${
+                            aiModel === 'gpt-5' 
+                              ? 'bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600' 
+                              : 'bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800'
+                          } text-white px-3 py-2 text-xs font-medium shadow-lg transition-all duration-300 hover:scale-105 border-0`}
+                        >
+                          <Zap className="h-3 w-3 mr-1" />
+                          {aiModel === 'gpt-5-mini' ? 'Boost' : 'Boosté ✨'}
+                        </Button>
+                      )}
+                    </div>
                     <Button 
                       onClick={handleSendMessage}
                       disabled={!userInput.trim() || isGenerating}

@@ -2,15 +2,14 @@
 
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
-import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { getSubmissionsByParent, getParentStats, getAvailableQuizzesForParent, getTeacherByClassroom } from '@/lib/database'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Progress } from '@/components/ui/progress'
+import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { 
   BookOpen, 
   Trophy, 
@@ -23,7 +22,6 @@ import {
   User,
   Users,
   Loader2,
-  LogOut,
   BarChart3,
   ChevronDown,
   ChevronUp,
@@ -31,7 +29,8 @@ import {
   Gamepad2,
   Smile,
   FileText,
-  Mic
+  Mic,
+  MessageSquare
 } from 'lucide-react'
 
 interface Submission {
@@ -54,7 +53,7 @@ export function ParentDashboard() {
   const { profile, schoolName, signOut, claims } = useAuth()
   const [teacherInfo, setTeacherInfo] = useState<{ full_name: string } | null>(null)
   const router = useRouter()
-  const [activeTab, setActiveTab] = useState('overview')
+  const [activeTab, setActiveTab] = useState('activities')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -101,10 +100,15 @@ export function ParentDashboard() {
         // Calculate engagement stats
         if (submissionsData && submissionsData.length > 0) {
           const totalQuizzes = submissionsData.length
-          const totalScore = submissionsData.reduce((sum: number, sub: any) => sum + (sub.score || 0), 0)
-          const averageScore = totalScore / totalQuizzes
+          
+          // Fix: Calculate average score as percentage
+          const scorePercentages = submissionsData.map((sub: any) => 
+            (sub.score / sub.total_questions) * 100
+          )
+          const averageScore = scorePercentages.reduce((sum: number, score: number) => sum + score, 0) / scorePercentages.length
+          
           const perfectScores = submissionsData.filter((sub: any) => sub.score === sub.total_questions).length
-          const bestScore = Math.max(...submissionsData.map((sub: any) => sub.score || 0))
+          const bestScore = Math.max(...scorePercentages)
           
           // Calculate this week's quizzes
           const oneWeekAgo = new Date()
@@ -121,31 +125,36 @@ export function ParentDashboard() {
           })
 
           const dailyCompletions = last15Days.map(date => {
-            const count = submissionsData.filter((sub: any) => 
-              sub.created_at.split('T')[0] === date
-            ).length
+            const count = submissionsData.filter((sub: any) => {
+              const submissionDate = new Date(sub.created_at).toISOString().split('T')[0]
+              return submissionDate === date
+            }).length
             return { date, count }
           })
 
           // Calculate daily average scores for last 15 days
           const dailyAverageScores = last15Days.map(date => {
-            const daySubmissions = submissionsData.filter((sub: any) => 
-              sub.created_at.split('T')[0] === date
-            )
+            const daySubmissions = submissionsData.filter((sub: any) => {
+              const submissionDate = new Date(sub.created_at).toISOString().split('T')[0]
+              return submissionDate === date
+            })
+            
             if (daySubmissions.length === 0) return { date, score: 0 }
             
-            const dayTotal = daySubmissions.reduce((sum: number, sub: any) => 
-              sum + ((sub.score / sub.total_questions) * 100), 0
+            const dayScorePercentages = daySubmissions.map((sub: any) => 
+              (sub.score / sub.total_questions) * 100
             )
-            return { date, score: Math.round(dayTotal / daySubmissions.length) }
+            const dayAverage = dayScorePercentages.reduce((sum: number, score: number) => sum + score, 0) / dayScorePercentages.length
+            
+            return { date, score: Math.round(dayAverage) }
           })
 
           setEngagementStats({
             totalQuizzesTaken: totalQuizzes,
-            averageScore: Math.round(averageScore * 100) / 100,
+            averageScore: Math.round(averageScore),
             thisWeekQuizzes,
             perfectScores,
-            bestScore,
+            bestScore: Math.round(bestScore),
             dailyCompletions,
             dailyAverageScores
           })
@@ -167,6 +176,26 @@ export function ParentDashboard() {
     return 'text-red-600'
   }
 
+  // Navigation items for parent dashboard
+  const navigationItems = [
+    {
+      id: 'activities',
+      label: 'Activités',
+      icon: BookOpen
+    },
+    {
+      id: 'progress',
+      label: 'Mes Progrès',
+      icon: TrendingUp
+    },
+    {
+      id: 'communication',
+      label: 'Communication',
+      icon: MessageSquare,
+      disabled: true
+    }
+  ]
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
@@ -181,146 +210,32 @@ export function ParentDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-      {/* Modern Header with Enhanced Gradients */}
-      <header className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 via-purple-600/10 to-pink-600/10 backdrop-blur-sm"></div>
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-800/90 to-slate-900/90"></div>
-        <div className="relative max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-3 sm:py-4">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center">
-              <div className="relative mr-3">
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl blur-lg opacity-50"></div>
-                <Image 
-                  src="/logo-principal.png" 
-                  alt="Futur Génie" 
-                  width={32} 
-                  height={32}
-                  className="relative w-8 h-8 sm:w-10 sm:h-10"
-                />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-                  <span className="text-lg sm:text-xl font-bold text-transparent bg-gradient-to-r from-white to-blue-200 bg-clip-text hidden sm:inline">Futur Génie</span>
-                  {schoolName && (
-                    <>
-                      <span className="hidden sm:inline text-slate-400">•</span>
-                      <span className="text-xl sm:text-2xl font-bold text-transparent bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text break-words">{schoolName}</span>
-                    </>
-                  )}
-                  {/* Mobile: Only show school name */}
-                  {schoolName && (
-                    <span className="text-lg font-bold text-transparent bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text break-words sm:hidden">{schoolName}</span>
-                  )}
-                </div>
-              </div>
-            </div>
-            <button 
-              onClick={signOut}
-              className="text-slate-400 hover:text-white transition-colors duration-200 p-2 rounded-lg hover:bg-slate-700/30"
-              title="Déconnexion"
-            >
-              <LogOut className="h-4 w-4" />
-            </button>
+    <DashboardLayout
+      schoolName={schoolName || undefined}
+      navigationItems={navigationItems}
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+      onSignOut={signOut}
+      userName={profile?.full_name?.split(' ')[0] || 'Parent'}
+    >
+      {error && (
+        <div className="relative overflow-hidden bg-gradient-to-r from-red-600/20 to-red-500/20 backdrop-blur-sm border border-red-500/30 rounded-xl p-3 sm:p-4 mb-4 sm:mb-6">
+          <div className="absolute inset-0 bg-red-500/5"></div>
+          <div className="relative flex items-center gap-2 text-red-400">
+            <AlertCircle className="h-4 w-4 flex-shrink-0" />
+            <span className="text-xs sm:text-sm break-words">{error}</span>
           </div>
         </div>
-      </header>
-
-      {/* Greeting Section */}
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 pt-4 pb-2">
-        <h1 className="text-xl sm:text-2xl font-bold text-transparent bg-gradient-to-r from-white to-slate-200 bg-clip-text">
-          Bonjour {profile?.full_name?.split(' ')[0] || 'Parent'}
-        </h1>
-      </div>
-
-      <main className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 lg:py-8">
-        {error && (
-          <div className="relative overflow-hidden bg-gradient-to-r from-red-600/20 to-red-500/20 backdrop-blur-sm border border-red-500/30 rounded-xl p-3 sm:p-4 mb-4 sm:mb-6">
-            <div className="absolute inset-0 bg-red-500/5"></div>
-            <div className="relative flex items-center gap-2 text-red-400">
-              <AlertCircle className="h-4 w-4 flex-shrink-0" />
-              <span className="text-xs sm:text-sm break-words">{error}</span>
-            </div>
-          </div>
-        )}
-        
-        <div>
-          {/* Enhanced Modern Tabs */}
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
-            <div className="relative overflow-hidden bg-gradient-to-r from-slate-700/50 to-slate-600/50 backdrop-blur-sm border border-slate-600/30 p-1 rounded-xl sm:rounded-2xl">
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-600/5 to-purple-600/5"></div>
-              <div className="relative grid grid-cols-3 gap-1">
-                <button
-                  onClick={() => setActiveTab('overview')}
-                  className={`relative px-2 sm:px-4 py-2 sm:py-3 rounded-lg sm:rounded-xl text-xs sm:text-sm font-medium transition-all duration-300 overflow-hidden ${
-                    activeTab === 'overview' 
-                      ? 'text-white shadow-lg transform scale-105' 
-                      : 'text-slate-400 hover:text-white hover:bg-slate-700/50 hover:scale-102'
-                  }`}
-                >
-                  {activeTab === 'overview' && (
-                    <>
-                      <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600 opacity-90"></div>
-                      <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-purple-600/20 blur-xl"></div>
-                    </>
-                  )}
-                  <span className="relative flex items-center justify-center gap-1">
-                    <BookOpen className="h-3 w-3 sm:h-4 sm:w-4" />
-                    <span className="hidden sm:inline">Activités</span>
-                    <span className="sm:hidden">Quiz</span>
-                  </span>
-                </button>
-                <button
-                  onClick={() => setActiveTab('progress')}
-                  className={`relative px-2 sm:px-4 py-2 sm:py-3 rounded-lg sm:rounded-xl text-xs sm:text-sm font-medium transition-all duration-300 overflow-hidden ${
-                    activeTab === 'progress' 
-                      ? 'text-white shadow-lg transform scale-105' 
-                      : 'text-slate-400 hover:text-white hover:bg-slate-700/50 hover:scale-102'
-                  }`}
-                >
-                  {activeTab === 'progress' && (
-                    <>
-                      <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-pink-600 opacity-90"></div>
-                      <div className="absolute inset-0 bg-gradient-to-r from-purple-600/20 to-pink-600/20 blur-xl"></div>
-                    </>
-                  )}
-                  <span className="relative flex items-center justify-center gap-1">
-                    <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4" />
-                    <span className="hidden sm:inline">Mes Progrès</span>
-                    <span className="sm:hidden">Progrès</span>
-                  </span>
-                </button>
-                <button
-                  onClick={() => setActiveTab('communication')}
-                  className={`relative px-2 sm:px-4 py-2 sm:py-3 rounded-lg sm:rounded-xl text-xs sm:text-sm font-medium transition-all duration-300 overflow-hidden ${
-                    activeTab === 'communication' 
-                      ? 'text-white shadow-lg transform scale-105' 
-                      : 'text-slate-400 hover:text-white hover:bg-slate-700/50 hover:scale-102'
-                  }`}
-                >
-                  {activeTab === 'communication' && (
-                    <>
-                      <div className="absolute inset-0 bg-gradient-to-r from-pink-600 to-red-600 opacity-90"></div>
-                      <div className="absolute inset-0 bg-gradient-to-r from-pink-600/20 to-red-600/20 blur-xl"></div>
-                    </>
-                  )}
-                  <span className="relative flex items-center justify-center gap-1">
-                    <Users className="h-3 w-3 sm:h-4 sm:w-4" />
-                    <span className="hidden sm:inline">Communication</span>
-                    <span className="sm:hidden">Messages</span>
-                  </span>
-                </button>
-              </div>
-            </div>
-            
-            {activeTab === 'overview' && (
+      )}
+      
+      {activeTab === 'activities' && (
               <div className="space-y-4 sm:space-y-6">
                 {/* Enhanced Recommended Activities Section */}
                 {availableQuizzes.length > 0 ? (
                   <div className="space-y-4 sm:space-y-6">
                     <div className="text-center mb-6 sm:mb-8">
                       <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-transparent bg-gradient-to-r from-white via-blue-100 to-purple-100 bg-clip-text mb-2">
-                        Activités de {teacherInfo?.full_name || 'ton enseignant(e)'}
+                        Activité École
                       </h2>
                     </div>
                     
@@ -372,10 +287,10 @@ export function ParentDashboard() {
                             </div>
                             
                             <button 
-                              className={`py-2 px-4 rounded-lg font-medium text-sm transition-all duration-300 ${
+                              className={`py-1.5 px-3 rounded-lg font-medium text-xs transition-all duration-300 ${
                                 quiz.isCompleted 
-                                  ? 'bg-slate-600 hover:bg-slate-500 text-slate-300 hover:text-white' 
-                                  : 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white'
+                                  ? 'bg-slate-600/80 hover:bg-slate-500 text-slate-300 hover:text-white border border-slate-500/50' 
+                                  : 'bg-slate-700/80 hover:bg-slate-600 text-blue-200 hover:text-white border border-blue-400/30 hover:border-blue-400/60'
                               }`}
                               onClick={() => {
                                 console.log('Navigating to quiz:', quiz.id)
@@ -396,7 +311,7 @@ export function ParentDashboard() {
                           onClick={() => setShowAllActivities(!showAllActivities)}
                           className="flex items-center justify-center gap-2 w-full py-3 px-4 bg-gradient-to-r from-slate-700/50 to-slate-600/50 backdrop-blur-sm border border-slate-600/40 rounded-xl hover:border-slate-500/60 transition-all duration-300 text-white font-medium"
                         >
-                          <span>Autres activités ({availableQuizzes.length - 3})</span>
+                          <span>Autres activités école ({availableQuizzes.length - 3})</span>
                           {showAllActivities ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                         </button>
                         
@@ -447,10 +362,10 @@ export function ParentDashboard() {
                                   </div>
                                   
                                   <button 
-                                    className={`py-2 px-4 rounded-lg font-medium text-sm transition-all duration-300 ${
+                                    className={`py-1.5 px-3 rounded-lg font-medium text-xs transition-all duration-300 ${
                                       quiz.isCompleted 
-                                        ? 'bg-slate-600 hover:bg-slate-500 text-slate-300 hover:text-white' 
-                                        : 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white'
+                                        ? 'bg-slate-600/80 hover:bg-slate-500 text-slate-300 hover:text-white border border-slate-500/50' 
+                                        : 'bg-slate-700/80 hover:bg-slate-600 text-blue-200 hover:text-white border border-blue-400/30 hover:border-blue-400/60'
                                     }`}
                                     onClick={() => {
                                       console.log('Navigating to quiz:', quiz.id)
@@ -467,8 +382,20 @@ export function ParentDashboard() {
                       </div>
                     )}
 
+                    {/* Visual Separator */}
+                    <div className="relative my-8 sm:my-12">
+                      <div className="absolute inset-0 flex items-center">
+                        <div className="w-full border-t border-gradient-to-r from-transparent via-slate-500/30 to-transparent"></div>
+                      </div>
+                      <div className="relative flex justify-center text-sm">
+                        <span className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 px-4 py-2 text-slate-400 rounded-full border border-slate-600/30">
+                          Autres activités
+                        </span>
+                      </div>
+                    </div>
+
                     {/* New sections with "bientôt disponible" */}
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-6 mt-8">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 sm:gap-6">
                       <div className="group relative overflow-hidden transition-all duration-300 hover:scale-105">
                         <div className="relative bg-gradient-to-br from-slate-700/60 to-slate-600/60 backdrop-blur-sm border border-slate-600/40 rounded-xl p-4 hover:border-slate-500/60 transition-all duration-300 h-full flex flex-col items-center justify-center text-center">
                           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-pink-600 to-red-600"></div>
@@ -538,6 +465,20 @@ export function ParentDashboard() {
                           </button>
                         </div>
                       </div>
+
+                      <div className="group relative overflow-hidden transition-all duration-300 hover:scale-105">
+                        <div className="relative bg-gradient-to-br from-slate-700/60 to-slate-600/60 backdrop-blur-sm border border-slate-600/40 rounded-xl p-4 hover:border-slate-500/60 transition-all duration-300 h-full flex flex-col items-center justify-center text-center">
+                          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-600 to-rose-600"></div>
+                          <div className="bg-gradient-to-r from-red-600 to-rose-600 p-3 rounded-full mb-3">
+                            <Mic className="h-6 w-6 text-white" />
+                          </div>
+                          <h3 className="text-sm font-semibold text-white mb-2">Anglais</h3>
+                          <p className="text-xs text-slate-400 mb-3">Bientôt disponible</p>
+                          <button className="py-1.5 px-3 bg-slate-600 text-slate-400 rounded-lg text-xs cursor-not-allowed">
+                            Prochainement
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 ) : (
@@ -553,8 +494,20 @@ export function ParentDashboard() {
                       <h3 className="text-lg sm:text-xl font-semibold text-white mb-3 sm:mb-4">Aucune activité disponible</h3>
                       <p className="text-slate-400 text-sm sm:text-base">{teacherInfo?.full_name || 'Ton enseignant(e)'} n'a pas encore publié de quiz pour ta classe.</p>
                       
+                      {/* Visual Separator */}
+                      <div className="relative my-8 sm:my-12">
+                        <div className="absolute inset-0 flex items-center">
+                          <div className="w-full border-t border-gradient-to-r from-transparent via-slate-500/30 to-transparent"></div>
+                        </div>
+                        <div className="relative flex justify-center text-sm">
+                          <span className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 px-4 py-2 text-slate-400 rounded-full border border-slate-600/30">
+                            Autres activités
+                          </span>
+                        </div>
+                      </div>
+
                       {/* Show "bientôt disponible" sections even when no quizzes */}
-                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-6 mt-8">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 sm:gap-6">
                         <div className="group relative overflow-hidden transition-all duration-300 hover:scale-105">
                           <div className="relative bg-gradient-to-br from-slate-700/60 to-slate-600/60 backdrop-blur-sm border border-slate-600/40 rounded-xl p-4 hover:border-slate-500/60 transition-all duration-300 h-full flex flex-col items-center justify-center text-center">
                             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-pink-600 to-red-600"></div>
@@ -624,14 +577,28 @@ export function ParentDashboard() {
                             </button>
                           </div>
                         </div>
+
+                        <div className="group relative overflow-hidden transition-all duration-300 hover:scale-105">
+                          <div className="relative bg-gradient-to-br from-slate-700/60 to-slate-600/60 backdrop-blur-sm border border-slate-600/40 rounded-xl p-4 hover:border-slate-500/60 transition-all duration-300 h-full flex flex-col items-center justify-center text-center">
+                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-600 to-rose-600"></div>
+                            <div className="bg-gradient-to-r from-red-600 to-rose-600 p-3 rounded-full mb-3">
+                              <Mic className="h-6 w-6 text-white" />
+                            </div>
+                            <h3 className="text-sm font-semibold text-white mb-2">Anglais</h3>
+                            <p className="text-xs text-slate-400 mb-3">Bientôt disponible</p>
+                            <button className="py-1.5 px-3 bg-slate-600 text-slate-400 rounded-lg text-xs cursor-not-allowed">
+                              Prochainement
+                            </button>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
                 )}
               </div>
-            )}
-            
-            {activeTab === 'progress' && (
+      )}
+      
+      {activeTab === 'progress' && (
               <div className="space-y-4 sm:space-y-6">
                 <div className="text-center mb-6 sm:mb-8">
                   <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-transparent bg-gradient-to-r from-white via-purple-100 to-pink-100 bg-clip-text mb-2">Mes Progrès</h2>
@@ -822,9 +789,9 @@ export function ParentDashboard() {
                   </div>
                 </div>
               </div>
-            )}
-            
-            {activeTab === 'communication' && (
+      )}
+      
+      {activeTab === 'communication' && (
               <div className="space-y-4 sm:space-y-6">
                 <div className="text-center mb-6 sm:mb-8">
                   <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-transparent bg-gradient-to-r from-white via-pink-100 to-red-100 bg-clip-text mb-2">Communication</h2>
@@ -853,10 +820,7 @@ export function ParentDashboard() {
                   </div>
                 </div>
               </div>
-            )}
-          </Tabs>
-        </div>
-      </main>
-    </div>
+      )}
+    </DashboardLayout>
   )
 }
