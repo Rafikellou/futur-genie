@@ -107,7 +107,7 @@ Instructions:
 - Crée exactement 10 questions variées (compréhension, application, analyse)
 - Chaque question doit avoir 4 choix de réponse (A, B, C, D)
 - Une seule réponse correcte par question
-- IMPORTANT: Mélange aléatoirement la position des bonnes réponses (A, B, C ou D) - évite de toujours mettre la bonne réponse en position A
+- IMPORTANT: Distribue aléatoirement la position des bonnes réponses à travers toutes les questions (A, B, C ou D) - évite de toujours mettre la bonne réponse en position A. À travers les 10 questions, les bonnes réponses doivent être réparties de manière aléatoire sur les 4 positions.
 - Questions progressives en difficulté
 - Adaptées au niveau ${gradeLevel}
 - En français

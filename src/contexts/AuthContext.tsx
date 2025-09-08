@@ -25,6 +25,7 @@ interface AuthContextType {
   signUp: (email: string, password: string, userData: Partial<SignUpData>) => Promise<void>
   signOut: () => Promise<void>
   refreshProfile: () => Promise<void>
+  refreshSession: () => Promise<void> // Add this line
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -163,7 +164,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signOut = async () => {
-    await AuthService.signOut()
+    try {
+      await AuthService.signOut()
+    } catch (error) {
+      // If we get a session_not_found error, it means the session is already invalid
+      // We can safely ignore this error and clear the local state
+      console.warn('Sign out error (likely already signed out):', error)
+      setUser(null)
+      setProfile(null)
+      setClaims(null)
+      setIsNewDirector(false)
+      setSchoolName(null)
+    }
+  }
+
+  // Add a function to refresh the session
+  const refreshSession = async () => {
+    try {
+      // Force refresh the session
+      const session = await AuthService.refreshSession()
+      
+      if (session) {
+        setUser(session.user)
+        const meta = getAuthMeta({ user: session.user } as any)
+        setClaims({
+          userId: meta.userId,
+          role: (meta.role as UserRole) ?? null,
+          schoolId: meta.schoolId ?? null,
+          classroomId: meta.classroomId ?? null,
+        })
+      } else {
+        setUser(null)
+        setClaims(null)
+      }
+    } catch (error) {
+      console.error('Error refreshing session:', error)
+      // If refresh fails, sign out the user
+      await signOut()
+    }
   }
 
   const value = {
@@ -177,6 +215,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signUp,
     signOut,
     refreshProfile,
+    refreshSession, // Add this to the context value
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

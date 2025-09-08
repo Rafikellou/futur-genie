@@ -179,8 +179,48 @@ export class AuthService {
    * Déconnexion
    */
   static async signOut() {
-    const { error } = await supabase.auth.signOut()
-    if (error) throw error
+    try {
+      const { error } = await supabase.auth.signOut()
+      if (error) {
+        // If we get a session_not_found error, it means the session is already invalid
+        // We can safely ignore this error
+        if (error.message.includes('session_not_found')) {
+          console.warn('Session already invalid or not found, continuing with sign out')
+          return
+        }
+        throw error
+      }
+    } catch (error: any) {
+      // If we get a session_not_found error, it means the session is already invalid
+      // We can safely ignore this error
+      if (error?.message?.includes('session_not_found')) {
+        console.warn('Session already invalid or not found, continuing with sign out')
+        return
+      }
+      throw error
+    }
+  }
+
+  /**
+   * Refresh the current session
+   */
+  static async refreshSession() {
+    try {
+      const { data, error } = await supabase.auth.refreshSession()
+      if (error) {
+        // If we get a session_not_found error, sign out the user
+        if (error.message.includes('session_not_found')) {
+          console.warn('Session not found, signing out')
+          // Clear local state
+          return null
+        }
+        throw error
+      }
+      return data.session
+    } catch (error) {
+      console.error('Error refreshing session:', error)
+      throw error
+    }
   }
 
   /**

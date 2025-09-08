@@ -88,16 +88,6 @@ export function QuizTaking({ quizId, onComplete, onExit }: QuizTakingProps) {
 
   // Add state for explanations
   const [explanations, setExplanations] = useState<Record<string, string>>({})
-  
-  // Function to shuffle choices array
-  const shuffleChoices = (choices: any[]) => {
-    const shuffled = [...choices]
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
-    }
-    return shuffled
-  }
 
   useEffect(() => {
     if (quizId) {
@@ -503,8 +493,6 @@ export function QuizTaking({ quizId, onComplete, onExit }: QuizTakingProps) {
   }
 
   const currentQuestion = quiz.items[currentQuestionIndex]
-  // Create shuffled choices for display
-  const shuffledChoices = currentQuestion ? shuffleChoices(currentQuestion.choices) : []
   const progress = ((currentQuestionIndex + 1) / quiz.items.length) * 100
   const answeredCount = getAnsweredQuestionsCount()
   const correctCount = getCorrectAnswersCount()
@@ -611,7 +599,7 @@ export function QuizTaking({ quizId, onComplete, onExit }: QuizTakingProps) {
           </h2>
           
           <div className="space-y-3">
-            {shuffledChoices.map((choice) => {
+            {currentQuestion.choices.map((choice) => {
               const isSelected = answers[currentQuestion.id]?.includes(choice.id)
               const isAnswered = isQuestionAnswered(currentQuestion.id)
               const isCorrect = currentQuestion.answer_keys.includes(choice.id)
@@ -782,5 +770,4 @@ export function QuizTaking({ quizId, onComplete, onExit }: QuizTakingProps) {
       </div>
     </div>
   )
-
 }
