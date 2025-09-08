@@ -584,11 +584,28 @@ export function QuizTaking({ quizId, onComplete, onExit }: QuizTakingProps) {
               {correctCount} bonnes réponses
             </span>
           </div>
-          <div className="w-full bg-slate-700/60 rounded-full h-3 overflow-hidden">
-            <div 
-              className="gradient-primary h-full rounded-full transition-all duration-500 ease-out" 
-              style={{ width: `${progress}%` }}
-            />
+          {/* Minimalist dot-based progress indicator */}
+          <div className="flex justify-center gap-1 py-2">
+            {quiz.items.map((_, index) => {
+              const questionId = quiz.items[index].id
+              const isAnswered = isQuestionAnswered(questionId)
+              const isCorrect = questionResults[questionId]
+              
+              return (
+                <div
+                  key={index}
+                  className={`w-2 h-2 rounded-full ${
+                    index === currentQuestionIndex
+                      ? 'bg-blue-400' // Current question
+                      : isAnswered
+                        ? isCorrect
+                          ? 'bg-green-500' // Correct answer
+                          : 'bg-red-500'   // Incorrect answer
+                        : 'bg-slate-600'   // Not answered yet
+                  }`}
+                />
+              )
+            })}
           </div>
         </div>
 
