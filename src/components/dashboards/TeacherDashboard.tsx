@@ -16,9 +16,9 @@ import {
   getQuizzesByTeacher, 
   getTeacherEngagementStats,
   publishQuiz,
-  deleteQuiz
+  deleteQuiz,
+  getUsersBySchool
 } from '@/lib/database'
-import { getTeacherStudents } from '@/lib/database-teacher'
 import { AIQuizCreator } from '@/components/teacher/AIQuizCreator'
 import { TeacherAnalytics } from '@/components/teacher/TeacherAnalytics'
 import { ClassroomManagement } from '@/components/teacher/ClassroomManagement'
@@ -138,8 +138,8 @@ export function TeacherDashboard() {
       setQuizzes(quizzesData as Quiz[])
       setEngagementStats(engagement)
       
-      // Get students (parents) for teacher's classroom - they are returned directly from the API
-      const studentsData = await getTeacherStudents(profile.id)
+      // Get students (parents) for the teacher's school via server API
+      const studentsData = await getUsersBySchool(profile.school_id || '')
       
       // Transform the data to match the expected Student interface
       const transformedStudents = studentsData.map((parent: any) => ({

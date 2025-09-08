@@ -29,7 +29,8 @@ export async function GET(
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
 
-    if (claims.role !== 'PARENT') {
+    // Allow both TEACHER and PARENT roles to access quizzes
+    if (claims.role !== 'PARENT' && claims.role !== 'TEACHER') {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
 

@@ -51,7 +51,7 @@
 - **Database**: Supabase (PostgreSQL)
 - **Authentication**: Supabase Auth with Row Level Security
 - **API**: Next.js API routes
-- **AI Integration**: OpenAI API for quiz generation
+- **AI Integration**: OpenAI API for quiz generation with DeepSeek fallback
 - **File Storage**: Supabase Storage
 
 ### Development & Deployment
@@ -67,6 +67,7 @@
 - npm, yarn, pnpm, or bun
 - Supabase account
 - OpenAI API key (for AI quiz generation)
+- DeepSeek API key (optional, for fallback AI provider)
 
 ### Installation
 
@@ -96,6 +97,7 @@
    NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
    SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
    OPENAI_API_KEY=your_openai_api_key
+   DEEPSEEK_API_KEY=your_deepseek_api_key  # Optional, for fallback
    ```
 
 4. **Set up the database**
@@ -209,6 +211,15 @@ The application uses Supabase with Row Level Security (RLS) policies for secure 
 - **Parents**: Access to their children's data only
 - **Students**: Access to their own data and assigned quizzes
 
+### AI Provider Configuration
+
+The application supports multiple AI providers for quiz generation:
+
+1. **OpenAI** (Primary): Configure `OPENAI_API_KEY` for GPT models
+2. **DeepSeek** (Fallback): Configure `DEEPSEEK_API_KEY` for automatic fallback when OpenAI fails
+
+When both providers are configured, the application will automatically fall back to DeepSeek if OpenAI encounters issues, without notifying the user of the switch.
+
 ## 🤝 Contributing
 
 1. Fork the repository
@@ -242,6 +253,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [Tailwind CSS](https://tailwindcss.com) for utility-first styling
 - [Radix UI](https://radix-ui.com) for accessible component primitives
 - [OpenAI](https://openai.com) for AI-powered quiz generation
+- [DeepSeek](https://www.deepseek.com) for alternative AI capabilities
 
 ---
 

@@ -54,34 +54,25 @@ export async function getUsersBySchoolLegacy(schoolId: string) {
 
 export async function getTeacherByClassroom(classroomId: string): Promise<{ full_name: string } | null> {
   try {
-    // First get the classroom to find the teacher_id
-    const { data: classroom, error: classroomError } = await supabase
-      .from('classrooms')
-      .select('teacher_id')
-      .eq('id', classroomId)
-      .single()
-
-    if (classroomError || !(classroom as any)?.teacher_id) {
-      console.error('Error fetching classroom info:', classroomError)
-      return null
-    }
-
-    // Then get the teacher's information
+    // Find the teacher by looking for a user with role TEACHER and the given classroom_id
     const { data: teacher, error: teacherError } = await supabase
       .from('users')
       .select('full_name')
-      .eq('id', (classroom as any).teacher_id)
+      .eq('classroom_id', classroomId)
+      .eq('role', 'TEACHER')
       .single()
 
     if (teacherError || !teacher) {
       console.error('Error fetching teacher info:', teacherError)
-      return null
+      // Return a default value instead of null to prevent UI errors
+      return { full_name: 'Enseignant(e)' }
     }
 
     return { full_name: (teacher as any).full_name }
   } catch (error) {
     console.error('Error in getTeacherByClassroom:', error)
-    return null
+    // Return a default value instead of null to prevent UI errors
+    return { full_name: 'Enseignant(e)' }
   }
 }
 
@@ -337,6 +328,30 @@ export async function createQuizItem(itemData: TablesInsert<'quiz_items'>) {
   return quizItem
 }
 
+export async function updateQuizItem(id: string, updates: any) {
+  const { data: session } = await supabase.auth.getSession()
+  if (!session.session?.access_token) {
+    throw new Error('No active session')
+  }
+
+  const res = await fetch('/api/quiz-items/update', {
+    method: 'PATCH',
+    headers: {
+      'Authorization': `Bearer ${session.session.access_token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ id, ...updates }),
+  })
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err?.error || 'Failed to update quiz item')
+  }
+
+  const { quizItem } = await res.json()
+  return quizItem
+}
+
 export async function publishQuiz(quizId: string, isPublished: boolean) {
   const { data: session } = await supabase.auth.getSession()
   if (!session.session?.access_token) {
@@ -383,18 +398,6 @@ export async function deleteQuiz(quizId: string) {
   }
 
   return true
-}
-
-export async function updateQuizItem(id: string, updates: any) {
-  const { data, error } = await (supabase as any)
-    .from('quiz_items')
-    .update(updates)
-    .eq('id', id)
-    .select()
-    .single()
-
-  if (error) throw error
-  return data
 }
 
 export async function deleteQuizItem(id: string) {
@@ -651,6 +654,29 @@ export async function getTeacherEngagementStats(teacherId: string) {
 
   const { stats } = await res.json()
   return stats
+}
+
+export async function getSubmissionsByTeacher(teacherId: string) {
+  const { data: session } = await supabase.auth.getSession()
+  if (!session.session?.access_token) {
+    throw new Error('No active session')
+  }
+
+  const res = await fetch('/api/teacher/submissions', {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${session.session.access_token}`,
+      'Content-Type': 'application/json',
+    },
+  })
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err?.error || 'Failed to get submissions')
+  }
+
+  const { submissions } = await res.json()
+  return submissions
 }
 
 // Invitation link operations

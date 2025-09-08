@@ -7,8 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Users, Copy, Mail, CheckCircle, AlertCircle, Loader2 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
-import { getClassroomsByTeacher } from '@/lib/database'
-import { getTeacherStudents, getSubmissionsByTeacher } from '@/lib/database-teacher'
+import { getClassroomsByTeacher, getUsersBySchool, getSubmissionsByTeacher } from '@/lib/database'
 
 interface Student {
   id: string
@@ -66,7 +65,7 @@ export function ClassroomManagement() {
 
       const [classroomsData, studentsData, submissionsData] = await Promise.all([
         getClassroomsByTeacher(profile.id),
-        getTeacherStudents(profile.id),
+        getUsersBySchool(profile.school_id || ''),
         getSubmissionsByTeacher(profile.id)
       ])
 

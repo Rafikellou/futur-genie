@@ -12,9 +12,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Check if OpenAI API key is configured
     if (!process.env.OPENAI_API_KEY) {
       return NextResponse.json(
-        { error: 'Clé API OpenAI non configurée' },
+        { error: 'Clé API OpenAI manquante. Veuillez vérifier la configuration.' },
         { status: 500 }
       )
     }

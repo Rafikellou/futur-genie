@@ -3,7 +3,27 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { FileText, Plus, Trash2, ChevronDown, ChevronRight, Calendar, Clock } from 'lucide-react'
+import { FileText, Plus, Trash2, ChevronDown, ChevronRight, Calendar, Clock, Edit, Loader2, CheckCircle } from 'lucide-react'
+import { getQuizWithItems } from '@/lib/database'
+import { EditQuestionDialog } from './EditQuestionDialog'
+
+// Custom scrollbar styles
+const customScrollbarStyles = `
+  .quiz-management-scrollbar::-webkit-scrollbar {
+    width: 8px;
+  }
+  .quiz-management-scrollbar::-webkit-scrollbar-track {
+    background: rgba(30, 41, 59, 0.5);
+    border-radius: 4px;
+  }
+  .quiz-management-scrollbar::-webkit-scrollbar-thumb {
+    background: linear-gradient(to bottom, #60a5fa, #a78bfa);
+    border-radius: 4px;
+  }
+  .quiz-management-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(to bottom, #3b82f6, #8b5cf6);
+  }
+`
 
 interface Quiz {
   id: string
@@ -27,6 +47,29 @@ interface QuizManagementProps {
   onPublishQuiz: (quizId: string, currentStatus: boolean) => void
   onDeleteQuiz: (quizId: string, quizTitle: string) => void
   onCreateQuiz: () => void
+}
+
+// Add interface for quiz with items
+interface QuizWithItems extends Quiz {
+  items: Array<{
+    id: string
+    question: string
+    choices: Array<{
+      id: string
+      text: string
+    }>
+    answer_keys: string[]
+    order_index: number
+    explanation?: string
+  }>
+}
+
+// Add interface for edit dialog state
+interface EditQuizDialogState {
+  isOpen: boolean
+  quiz: QuizWithItems | null
+  loading: boolean
+  error: string | null
 }
 
 interface DeleteConfirmationProps {
@@ -91,6 +134,24 @@ function DeleteConfirmationDialog({ quiz, isOpen, onClose, onConfirm }: DeleteCo
 export function QuizManagement({ quizzes, onPublishQuiz, onDeleteQuiz, onCreateQuiz }: QuizManagementProps) {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['thisWeek']))
   const [deleteQuiz, setDeleteQuiz] = useState<Quiz | null>(null)
+  // Add state for edit dialog
+  const [editDialog, setEditDialog] = useState<EditQuizDialogState>({
+    isOpen: false,
+    quiz: null,
+    loading: false,
+    error: null
+  })
+  // Add state for question editing
+  const [editingQuestion, setEditingQuestion] = useState<{
+    question: {
+      id: string
+      question: string
+      choices: Array<{ id: string; text: string }>
+      answer_keys: string[]
+    } | null
+  }>({
+    question: null
+  })
 
   const toggleSection = (section: string) => {
     const newExpanded = new Set(expandedSections)
@@ -160,6 +221,55 @@ export function QuizManagement({ quizzes, onPublishQuiz, onDeleteQuiz, onCreateQ
     }
   }
 
+  const handleEditQuiz = async (quizId: string) => {
+    try {
+      setEditDialog(prev => ({ ...prev, loading: true, error: null }))
+      const quizWithItems = await getQuizWithItems(quizId)
+      
+      // Sort questions by order_index
+      const sortedQuestions = quizWithItems.items.sort((a: any, b: any) => 
+        a.order_index - b.order_index
+      )
+      
+      setEditDialog({
+        isOpen: true,
+        quiz: {
+          ...quizWithItems,
+          items: sortedQuestions
+        },
+        loading: false,
+        error: null
+      })
+    } catch (error: any) {
+      setEditDialog({
+        isOpen: true,
+        quiz: null,
+        loading: false,
+        error: error.message || 'Erreur lors du chargement du quiz'
+      })
+    }
+  }
+
+  const handleEditQuestion = (question: any) => {
+    setEditingQuestion({
+      question: {
+        id: question.id,
+        question: question.question,
+        choices: [...question.choices],
+        answer_keys: [...question.answer_keys]
+      }
+    })
+  }
+
+  const handleQuestionUpdated = () => {
+    // Refresh the quiz data after a question is updated
+    if (editDialog.quiz) {
+      handleEditQuiz(editDialog.quiz.id)
+    }
+    // Close the question editing dialog
+    setEditingQuestion({ question: null })
+  }
+
   const renderQuizCard = (quiz: Quiz) => (
     <div key={quiz.id} className="group relative">
       <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 hover:bg-slate-800/70 transition-all duration-200">
@@ -192,6 +302,16 @@ export function QuizManagement({ quizzes, onPublishQuiz, onDeleteQuiz, onCreateQ
           </div>
           
           <div className="flex items-center justify-end gap-2 flex-shrink-0">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => handleEditQuiz(quiz.id)}
+              className="border-slate-600/50 text-slate-400 hover:bg-slate-600/10 hover:border-slate-500 px-3 py-1 text-xs"
+            >
+              <Edit className="h-3 w-3 mr-1" />
+              Modifier
+            </Button>
+            
             {!quiz.is_published ? (
               <Button
                 size="sm"
@@ -306,17 +426,154 @@ export function QuizManagement({ quizzes, onPublishQuiz, onDeleteQuiz, onCreateQ
   const { thisWeek, lastWeek, older } = categorizeQuizzes()
 
   return (
-    <div className="space-y-6">
-      {renderSection('Cette semaine', 'thisWeek', thisWeek, thisWeek.length)}
-      {renderSection('La semaine dernière', 'lastWeek', lastWeek, lastWeek.length)}
-      {renderSection('Plus tôt', 'older', older, older.length)}
-      
-      <DeleteConfirmationDialog
-        quiz={deleteQuiz}
-        isOpen={!!deleteQuiz}
-        onClose={() => setDeleteQuiz(null)}
-        onConfirm={handleDeleteConfirm}
-      />
-    </div>
+    <>
+      <style dangerouslySetInnerHTML={{ __html: customScrollbarStyles }} />
+      <div className="space-y-6">
+        {renderSection('Cette semaine', 'thisWeek', thisWeek, thisWeek.length)}
+        {renderSection('La semaine dernière', 'lastWeek', lastWeek, lastWeek.length)}
+        {renderSection('Plus tôt', 'older', older, older.length)}
+        
+        <DeleteConfirmationDialog
+          quiz={deleteQuiz}
+          isOpen={!!deleteQuiz}
+          onClose={() => setDeleteQuiz(null)}
+          onConfirm={handleDeleteConfirm}
+        />
+        
+        {/* Edit Quiz Dialog */}
+        <Dialog open={editDialog.isOpen} onOpenChange={(open) => {
+          if (!open) {
+            setEditDialog({
+              isOpen: false,
+              quiz: null,
+              loading: false,
+              error: null
+            })
+          }
+        }}>
+          <DialogContent className="bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-600/50 max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
+            <DialogHeader>
+              <DialogTitle className="text-white">
+                {editDialog.quiz ? editDialog.quiz.title : 'Modifier le quiz'}
+              </DialogTitle>
+              <DialogDescription className="text-slate-400">
+                Cliquez sur le bouton "Modifier" à côté de chaque question pour la modifier
+              </DialogDescription>
+            </DialogHeader>
+            
+            {editDialog.loading && (
+              <div className="flex justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-blue-400" />
+              </div>
+            )}
+            
+            {editDialog.error && (
+              <div className="bg-red-900/50 border border-red-700/50 rounded-lg p-4 text-red-300">
+                {editDialog.error}
+              </div>
+            )}
+            
+            {editDialog.quiz && !editDialog.loading && (
+              <div className="flex-1 overflow-y-auto quiz-management-scrollbar pr-2 py-2">
+                <div className="space-y-6 pb-4">
+                  <div className="bg-slate-700/50 rounded-lg p-4 border border-slate-600/30">
+                    <h4 className="font-semibold text-white mb-3">Description</h4>
+                    <p className="text-slate-300 text-sm">
+                      {editDialog.quiz.description || 'Aucune description'}
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="font-semibold text-white mb-3">Questions</h4>
+                    <div className="space-y-4">
+                      {editDialog.quiz.items.map((question, index) => (
+                        <div key={question.id} className="bg-gradient-to-br from-slate-700/40 to-slate-600/40 backdrop-blur-sm border border-slate-500/30 rounded-xl p-4 space-y-3">
+                          <div className="flex items-start space-x-3">
+                            <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg flex items-center justify-center">
+                              <span className="text-sm font-bold text-white">{index + 1}</span>
+                            </div>
+                            <div className="flex-1">
+                              <p className="font-semibold text-white leading-relaxed text-sm">{question.question}</p>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEditQuestion(question)}
+                              className="h-8 w-8 p-0 hover:bg-slate-500/50"
+                            >
+                              <Edit className="h-4 w-4 text-slate-300" />
+                            </Button>
+                          </div>
+                          
+                          <div className="grid grid-cols-1 gap-2 ml-11">
+                            {question.choices.map((choice) => (
+                              <div key={choice.id} className={`flex items-center space-x-3 p-3 rounded-lg border transition-all ${
+                                question.answer_keys.includes(choice.id) 
+                                  ? 'bg-gradient-to-r from-green-600/20 to-emerald-600/20 border-green-500/40' 
+                                  : 'bg-gradient-to-r from-slate-500/20 to-slate-400/20 border-slate-400/30'
+                              }`}>
+                                <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold ${
+                                  question.answer_keys.includes(choice.id)
+                                    ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white'
+                                    : 'bg-gradient-to-r from-slate-400 to-slate-300 text-white'
+                                }`}>
+                                  {choice.id}
+                                </div>
+                                <span className="text-white text-sm">{choice.text}</span>
+                                {question.answer_keys.includes(choice.id) && (
+                                  <CheckCircle className="h-4 w-4 text-green-400 ml-auto" />
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                          
+                          {question.explanation && (
+                            <div className="ml-11 bg-gradient-to-r from-blue-600/20 to-indigo-600/20 backdrop-blur-sm border border-blue-500/30 rounded-lg p-3">
+                              <div className="flex items-start space-x-2">
+                                <div className="w-6 h-6 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-lg flex items-center justify-center">
+                                  <span className="text-xs">💡</span>
+                                </div>
+                                <div>
+                                  <span className="text-blue-300 font-bold text-xs">EXPLICATION</span>
+                                  <p className="text-slate-200 text-sm mt-1">{question.explanation}</p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <div className="flex justify-end">
+                    <Button
+                      onClick={() => {
+                        setEditDialog({
+                          isOpen: false,
+                          quiz: null,
+                          loading: false,
+                          error: null
+                        })
+                      }}
+                      className="bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800 text-white px-6 py-2 text-sm font-medium"
+                    >
+                      Fermer
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+        
+        {/* Edit Question Dialog */}
+        <EditQuestionDialog
+          isOpen={!!editingQuestion.question}
+          onClose={() => setEditingQuestion({ question: null })}
+          question={editingQuestion.question}
+          onQuestionUpdated={handleQuestionUpdated}
+        />
+      </div>
+    </>
   )
 }

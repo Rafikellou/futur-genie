@@ -5,14 +5,7 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 })
 
-// Initialize DeepSeek client if API key is provided
-let deepSeekClient: OpenAI | null = null
-if (process.env.DEEPSEEK_API_KEY) {
-  deepSeekClient = new OpenAI({
-    apiKey: process.env.DEEPSEEK_API_KEY,
-    baseURL: 'https://api.deepseek.com/v1',
-  })
-}
+// Removed DeepSeek client - focusing on OpenAI only
 
 export interface QuizQuestion {
   question: string
@@ -31,49 +24,72 @@ export interface GeneratedQuiz {
 }
 
 // Type for supported AI models
-type AIModel = 'gpt-4o-mini' | 'gpt-4o' | 'deepseek-chat'
+type AIModel = 'gpt-4o-mini' | 'gpt-4o'
 
-// Updated function to support multiple AI providers
-async function callAIProvider(
+// Simplified function to call OpenAI only
+async function callOpenAI(
   prompt: string, 
   aiModel: AIModel, 
   instructions: string
 ): Promise<any> {
   try {
-    // Try GPT models first
-    if (aiModel === 'gpt-4o-mini' || aiModel === 'gpt-4o') {
-      const completion = await openai.chat.completions.create({
-        model: aiModel,
-        messages: [
-          { role: "system", content: instructions },
-          { role: "user", content: prompt }
-        ],
-        max_completion_tokens: 3000,
-        temperature: 0.7
-      })
-      
-      return completion
+    // Validate API key first
+    if (!process.env.OPENAI_API_KEY) {
+      throw new Error('Clé API OpenAI manquante. Veuillez vérifier la configuration.')
+    }
+
+    // Validate model
+    if (aiModel !== 'gpt-4o-mini' && aiModel !== 'gpt-4o') {
+      throw new Error(`Modèle non supporté: ${aiModel}. Modèles supportés: gpt-4o-mini, gpt-4o`)
+    }
+
+    console.log(`Calling OpenAI with model: ${aiModel}`)
+    
+    const completion = await openai.chat.completions.create({
+      model: aiModel,
+      messages: [
+        { role: "system", content: instructions },
+        { role: "user", content: prompt }
+      ],
+      max_tokens: 4000, // Using max_tokens instead of max_completion_tokens
+      temperature: 0.3, // Lower temperature for more consistent results
+      top_p: 1,
+      frequency_penalty: 0,
+      presence_penalty: 0
+    })
+    
+    console.log(`OpenAI response received for model ${aiModel}:`, {
+      choices: completion.choices?.length,
+      usage: completion.usage
+    })
+    
+    return completion
+  } catch (error: any) {
+    console.error(`OpenAI Error (${aiModel}):`, {
+      message: error.message,
+      type: error.type,
+      code: error.code,
+      status: error.status
+    })
+    
+    // Provide more specific error messages
+    if (error.code === 'invalid_api_key') {
+      throw new Error('Clé API OpenAI invalide. Veuillez vérifier votre configuration.')
+    }
+    if (error.code === 'insufficient_quota') {
+      throw new Error('Quota OpenAI dépassé. Veuillez vérifier votre compte OpenAI.')
+    }
+    if (error.code === 'model_not_found') {
+      throw new Error(`Modèle ${aiModel} non disponible. Essayez avec gpt-4o-mini.`)
+    }
+    if (error.status === 429) {
+      throw new Error('Limite de taux OpenAI atteinte. Veuillez réessayer dans quelques secondes.')
+    }
+    if (error.status >= 500) {
+      throw new Error('Erreur serveur OpenAI. Veuillez réessayer plus tard.')
     }
     
-    // Try DeepSeek if available
-    if (aiModel === 'deepseek-chat' && deepSeekClient) {
-      const completion = await deepSeekClient.chat.completions.create({
-        model: 'deepseek-chat',
-        messages: [
-          { role: "system", content: instructions },
-          { role: "user", content: prompt }
-        ],
-        max_completion_tokens: 3000,
-        temperature: 1 // DeepSeek only supports default temperature value of 1
-      })
-      
-      return completion
-    }
-    
-    throw new Error('Modèle IA non supporté ou clé API manquante')
-  } catch (error) {
-    console.error(`AI Provider Error (${aiModel}):`, error)
-    throw error
+    throw new Error(error.message || 'Erreur lors de l\'appel à OpenAI')
   }
 }
 
@@ -116,7 +132,7 @@ Réponds UNIQUEMENT avec un JSON valide dans ce format exact:
   ]
 }`
 
-    const completion = await callAIProvider(
+    const completion = await callOpenAI(
       prompt,
       aiModel,
       "Tu es un assistant spécialisé dans la création de quiz éducatifs. Tu réponds UNIQUEMENT avec du JSON valide, sans texte supplémentaire."
@@ -226,7 +242,7 @@ Réponds UNIQUEMENT avec un JSON valide contenant le tableau de questions améli
   }
 ]`
 
-    const completion = await callAIProvider(
+    const completion = await callOpenAI(
       prompt,
       aiModel,
       "Tu es un assistant spécialisé dans l'amélioration de quiz éducatifs. Tu réponds UNIQUEMENT avec du JSON valide."

@@ -33,6 +33,21 @@ const customScrollbarStyles = `
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background: linear-gradient(to bottom, #2563eb, #7c3aed);
   }
+  
+  .ai-quiz-scrollbar::-webkit-scrollbar {
+    width: 8px;
+  }
+  .ai-quiz-scrollbar::-webkit-scrollbar-track {
+    background: rgba(30, 41, 59, 0.5);
+    border-radius: 4px;
+  }
+  .ai-quiz-scrollbar::-webkit-scrollbar-thumb {
+    background: linear-gradient(to bottom, #60a5fa, #a78bfa);
+    border-radius: 4px;
+  }
+  .ai-quiz-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(to bottom, #3b82f6, #8b5cf6);
+  }
 `
 import { getClassroomsByTeacher, createQuiz, createQuizItem } from '@/lib/database'
 import { GeneratedQuiz, QuizQuestion } from '@/lib/openai'
@@ -61,6 +76,14 @@ interface QuizCreationData {
   description: string
   classroomId: string
   gradeLevel: string
+}
+
+// Add interface for edit dialog state
+interface EditQuizDialogState {
+  isOpen: boolean
+  quiz: GeneratedQuiz | null
+  title: string
+  description: string
 }
 
 export function AIQuizCreator() {
@@ -104,14 +127,34 @@ export function AIQuizCreator() {
   const [isSaving, setIsSaving] = useState(false)
   
   // AI Model state
-  const [aiModel, setAiModel] = useState<'gpt-5-mini' | 'gpt-5'>('gpt-5-mini')
+  const [aiModel, setAiModel] = useState<'gpt-4o-mini' | 'gpt-4o'>('gpt-4o-mini')
   const [hasInteracted, setHasInteracted] = useState(false)
   
   // Success popup state
   const [showPopup, setShowPopup] = useState(false)
   const [popupMessage, setPopupMessage] = useState('')
   const [popupIsPublished, setPopupIsPublished] = useState(false)
-
+  
+  // Add state for the edit dialog (new approach)
+  const [editDialog, setEditDialog] = useState<EditQuizDialogState>({
+    isOpen: false,
+    quiz: null,
+    title: '',
+    description: ''
+  })
+  // Add state for question editing
+  const [editingQuestion, setEditingQuestion] = useState<{
+    questionIndex: number | null
+    questionText: string
+    choices: Array<{ id: string; text: string }>
+    correctAnswerId: string
+  }>({
+    questionIndex: null,
+    questionText: '',
+    choices: [],
+    correctAnswerId: ''
+  })
+  
   useEffect(() => {
     if (profile?.id) {
       fetchClassrooms()
@@ -155,6 +198,14 @@ export function AIQuizCreator() {
     
     typeText()
   }, [placeholderIndex, userInput, hasInteracted])
+  
+  // Add a useEffect to log changes to generatedQuiz for debugging
+  useEffect(() => {
+    // This will help us verify that the state is updating correctly
+    if (generatedQuiz) {
+      // console.log('Generated quiz updated:', generatedQuiz);
+    }
+  }, [generatedQuiz])
 
   const fetchClassrooms = async () => {
     if (!profile?.id) return
@@ -179,6 +230,7 @@ export function AIQuizCreator() {
     setChatMessages(prev => [...prev, newMessage])
   }
 
+  // Updated function with fallback mechanism
   const handleSendMessage = async () => {
     if (!userInput.trim() || isGenerating) return
     
@@ -211,32 +263,8 @@ export function AIQuizCreator() {
         return
       }
       
-      // Generate new quiz using API
-      const response = await fetch('/api/quiz/generate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          lessonDescription: message,
-          gradeLevel,
-          aiModel
-        }),
-      })
-      
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Erreur lors de la génération')
-      }
-      
-      const quiz: GeneratedQuiz = await response.json()
-      setGeneratedQuiz(quiz)
-      setQuizTitle(quiz.title)
-      setQuizDescription(quiz.description)
-      
-      // Add assistant response with quiz data
-      const modelText = aiModel === 'gpt-5' ? ' (Intelligence boostée)' : ''
-      addMessage('assistant', `J'ai généré un quiz "${quiz.title}" avec ${quiz.questions.length} questions basées sur votre leçon${modelText} :`, quiz)
+      // Generate quiz with selected model
+      await generateQuizWithModel(aiModel, message, gradeLevel)
       
     } catch (error: any) {
       handleSupabaseError(error as any)
@@ -246,6 +274,36 @@ export function AIQuizCreator() {
     }
   }
 
+  // Helper function to generate quiz with OpenAI model
+  const generateQuizWithModel = async (model: 'gpt-4o-mini' | 'gpt-4o', message: string, gradeLevel: string) => {
+    const response = await fetch('/api/quiz/generate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        lessonDescription: message,
+        gradeLevel,
+        aiModel: model
+      }),
+    })
+    
+    if (!response.ok) {
+      const errorData = await response.json()
+      throw new Error(errorData.error || 'Erreur lors de la génération')
+    }
+    
+    const quiz: GeneratedQuiz = await response.json()
+    setGeneratedQuiz(quiz)
+    setQuizTitle(quiz.title)
+    setQuizDescription(quiz.description)
+    
+    // Add assistant response with quiz data
+    const modelText = model === 'gpt-4o' ? ' (Intelligence boostée)' : ''
+    addMessage('assistant', `J'ai généré un quiz "${quiz.title}" avec ${quiz.questions.length} questions basées sur votre leçon${modelText} :`, quiz)
+  }
+
+  // Updated improvement function with fallback
   const handleImproveQuiz = async (feedback: string) => {
     if (!generatedQuiz || !feedback.trim() || isGenerating) return
     
@@ -261,30 +319,8 @@ export function AIQuizCreator() {
         }
       }
       
-      const response = await fetch('/api/quiz/improve', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          currentQuestions: generatedQuiz.questions,
-          feedback: feedback,
-          gradeLevel,
-          aiModel
-        }),
-      })
-      
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Erreur lors de l\'amélioration')
-      }
-      
-      const { questions } = await response.json()
-      const updatedQuiz = { ...generatedQuiz!, questions }
-      setGeneratedQuiz(updatedQuiz)
-      
-      // Add assistant response with updated quiz
-      addMessage('assistant', 'J\'ai amélioré les questions selon vos demandes :', updatedQuiz)
+      // Improve quiz with selected model
+      await improveQuizWithModel(aiModel, feedback, gradeLevel)
       
     } catch (error: any) {
       handleSupabaseError(error as any)
@@ -292,6 +328,34 @@ export function AIQuizCreator() {
     } finally {
       setIsGenerating(false)
     }
+  }
+
+  // Helper function to improve quiz with OpenAI model
+  const improveQuizWithModel = async (model: 'gpt-4o-mini' | 'gpt-4o', feedback: string, gradeLevel: string) => {
+    const response = await fetch('/api/quiz/improve', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        currentQuestions: generatedQuiz!.questions,
+        feedback: feedback,
+        gradeLevel,
+        aiModel: model
+      }),
+    })
+    
+    if (!response.ok) {
+      const errorData = await response.json()
+      throw new Error(errorData.error || 'Erreur lors de l\'amélioration')
+    }
+    
+    const { questions } = await response.json()
+    const updatedQuiz = { ...generatedQuiz!, questions }
+    setGeneratedQuiz(updatedQuiz)
+    
+    // Add assistant response with updated quiz
+    addMessage('assistant', 'J\'ai amélioré les questions selon vos demandes :', updatedQuiz)
   }
 
   const handleSaveQuiz = async (publish: boolean = false) => {
@@ -384,14 +448,78 @@ export function AIQuizCreator() {
     }
   }
 
-  const handleEditQuestion = (index: number, newQuestion: Partial<QuizQuestion>) => {
+  // New function to handle edit quiz (like in QuizManagement)
+  const handleEditQuiz = () => {
     if (!generatedQuiz) return
     
-    const updatedQuestions = [...generatedQuiz.questions]
-    updatedQuestions[index] = { ...updatedQuestions[index], ...newQuestion }
+    setEditDialog({
+      isOpen: true,
+      quiz: generatedQuiz,
+      title: quizTitle,
+      description: quizDescription
+    })
+  }
+
+  // New function to handle edit question (like in QuizManagement)
+  const handleEditQuestion = (index: number) => {
+    if (!generatedQuiz) return
+    
+    const question = generatedQuiz.questions[index]
+    setEditingQuestion({
+      questionIndex: index,
+      questionText: question.question,
+      choices: [...question.choices],
+      correctAnswerId: question.answer_keys[0] || ''
+    })
+  }
+
+  // New function to save edited question
+  const handleSaveEditedQuestion = () => {
+    if (!generatedQuiz || editingQuestion.questionIndex === null) return
+    
+    // Create a deep copy of the questions array
+    const updatedQuestions = JSON.parse(JSON.stringify(generatedQuiz.questions))
+    updatedQuestions[editingQuestion.questionIndex] = {
+      ...updatedQuestions[editingQuestion.questionIndex],
+      question: editingQuestion.questionText,
+      choices: editingQuestion.choices,
+      answer_keys: [editingQuestion.correctAnswerId]
+    }
     
     setGeneratedQuiz({ ...generatedQuiz, questions: updatedQuestions })
-    setEditingQuestionIndex(null)
+    
+    // Update the quiz in the edit dialog if it's open
+    if (editDialog.isOpen && editDialog.quiz) {
+      setEditDialog({
+        ...editDialog,
+        quiz: {
+          ...editDialog.quiz,
+          questions: updatedQuestions
+        }
+      })
+    }
+    
+    setEditingQuestion({
+      questionIndex: null,
+      questionText: '',
+      choices: [],
+      correctAnswerId: ''
+    })
+  }
+
+  const handleChoiceChange = (choiceId: string, newText: string) => {
+    setEditingQuestion(prev => {
+      // Create a deep copy of the choices array
+      const newChoices = JSON.parse(JSON.stringify(prev.choices))
+      const choiceIndex = newChoices.findIndex((c: any) => c.id === choiceId)
+      if (choiceIndex !== -1) {
+        newChoices[choiceIndex].text = newText
+      }
+      return {
+        ...prev,
+        choices: newChoices
+      }
+    })
   }
 
   const formatTimestamp = (date: Date) => {
@@ -476,7 +604,7 @@ export function AIQuizCreator() {
                       {message.quiz && (
                         <div className="mt-4 space-y-4">
                           
-                          {/* Quiz Questions */}
+                          {/* Quiz Questions - WITHOUT edit buttons */}
                           <div className="space-y-4">
                             {message.quiz.questions.map((question, index) => (
                               <div key={index} className="bg-gradient-to-br from-slate-600/40 to-slate-500/40 backdrop-blur-sm border border-slate-500/30 rounded-xl p-4 space-y-3">
@@ -487,6 +615,7 @@ export function AIQuizCreator() {
                                   <div className="flex-1">
                                     <p className="font-semibold text-white leading-relaxed text-sm">{question.question}</p>
                                   </div>
+                                  {/* NO EDIT BUTTON HERE - removed as per requirements */}
                                 </div>
                                 
                                 <div className="grid grid-cols-1 gap-2 ml-11">
@@ -528,7 +657,7 @@ export function AIQuizCreator() {
                             ))}
                           </div>
                           
-                          {/* Action Buttons */}
+                          {/* Action Buttons - WITH new "Modifier" button */}
                           <div className="bg-gradient-to-r from-slate-600/50 to-slate-500/50 backdrop-blur-sm border border-slate-500/30 rounded-xl p-4 space-y-4">
                             <div className="flex items-center space-x-3">
                               <div className="w-6 h-6 bg-gradient-to-r from-green-500 to-emerald-500 rounded-lg flex items-center justify-center">
@@ -537,7 +666,15 @@ export function AIQuizCreator() {
                               <h4 className="text-base font-bold text-white">Sauvegarder le Quiz</h4>
                             </div>
                             
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                              <Button 
+                                onClick={handleEditQuiz}
+                                className="w-full bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800 text-white border border-slate-500/50 shadow-lg transition-all duration-300 hover:scale-105 py-2.5 text-sm"
+                              >
+                                <Edit className="h-4 w-4 mr-2" />
+                                Modifier
+                              </Button>
+                              
                               <Button 
                                 onClick={() => handleSaveQuiz(true)}
                                 disabled={!selectedClassroom || !quizTitle.trim() || isSaving}
@@ -638,15 +775,15 @@ export function AIQuizCreator() {
                       {/* AI Model Boost Button */}
                       {hasInteracted && (
                         <Button 
-                          onClick={() => setAiModel(aiModel === 'gpt-5-mini' ? 'gpt-5' : 'gpt-5-mini')}
+                          onClick={() => setAiModel(aiModel === 'gpt-4o-mini' ? 'gpt-4o' : 'gpt-4o-mini')}
                           className={`${
-                            aiModel === 'gpt-5' 
+                            aiModel === 'gpt-4o' 
                               ? 'bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600' 
                               : 'bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800'
                           } text-white px-3 py-2 text-xs font-medium shadow-lg transition-all duration-300 hover:scale-105 border-0`}
                         >
                           <Zap className="h-3 w-3 mr-1" />
-                          {aiModel === 'gpt-5-mini' ? 'Boost' : 'Boosté ✨'}
+                          {aiModel === 'gpt-4o-mini' ? 'Boost' : 'Boosté ✨'}
                         </Button>
                       )}
                     </div>
@@ -708,6 +845,211 @@ export function AIQuizCreator() {
       </div>
     )}
     
-    </>
+    {/* Edit Quiz Dialog - NEW DIALOG LIKE IN QUIZ MANAGEMENT */}
+    <Dialog open={editDialog.isOpen} onOpenChange={(open) => {
+      if (!open) {
+        setEditDialog({
+          isOpen: false,
+          quiz: null,
+          title: '',
+          description: ''
+        })
+      }
+    }}>
+      <DialogContent className="bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-600/50 max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
+        <DialogHeader>
+          <DialogTitle className="text-white">
+            {editDialog.quiz ? editDialog.title || editDialog.quiz.title : 'Modifier le quiz'}
+          </DialogTitle>
+          <DialogDescription className="text-slate-400">
+            Cliquez sur le bouton "Modifier" à côté de chaque question pour la modifier
+          </DialogDescription>
+        </DialogHeader>
+        
+        {editDialog.quiz && (
+          <div className="flex-1 overflow-y-auto ai-quiz-scrollbar pr-2 py-2">
+            <div className="space-y-6 pb-4">
+              <div className="bg-slate-700/50 rounded-lg p-4 border border-slate-600/30">
+                <h4 className="font-semibold text-white mb-3">Description</h4>
+                <p className="text-slate-300 text-sm">
+                  {editDialog.description || editDialog.quiz.description || 'Aucune description'}
+                </p>
+              </div>
+              
+              <div>
+                <h4 className="font-semibold text-white mb-3">Questions</h4>
+                <div className="space-y-4">
+                  {editDialog.quiz.questions.map((question, index) => (
+                    <div key={index} className="bg-gradient-to-br from-slate-700/40 to-slate-600/40 backdrop-blur-sm border border-slate-500/30 rounded-xl p-4 space-y-3">
+                      <div className="flex items-start space-x-3">
+                        <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg flex items-center justify-center">
+                          <span className="text-sm font-bold text-white">{index + 1}</span>
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-semibold text-white leading-relaxed text-sm">{question.question}</p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEditQuestion(index)}
+                          className="h-8 w-8 p-0 hover:bg-slate-500/50"
+                        >
+                          <Edit className="h-4 w-4 text-slate-300" />
+                        </Button>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 gap-2 ml-11">
+                        {question.choices.map((choice) => (
+                          <div key={choice.id} className={`flex items-center space-x-3 p-3 rounded-lg border transition-all ${
+                            question.answer_keys.includes(choice.id) 
+                              ? 'bg-gradient-to-r from-green-600/20 to-emerald-600/20 border-green-500/40' 
+                              : 'bg-gradient-to-r from-slate-500/20 to-slate-400/20 border-slate-400/30'
+                          }`}>
+                            <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold ${
+                              question.answer_keys.includes(choice.id)
+                                ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white'
+                                : 'bg-gradient-to-r from-slate-400 to-slate-300 text-white'
+                            }`}>
+                              {choice.id}
+                            </div>
+                            <span className="text-white text-sm">{choice.text}</span>
+                            {question.answer_keys.includes(choice.id) && (
+                              <CheckCircle className="h-4 w-4 text-green-400 ml-auto" />
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                      
+                      {question.explanation && (
+                        <div className="ml-11 bg-gradient-to-r from-blue-600/20 to-indigo-600/20 backdrop-blur-sm border border-blue-500/30 rounded-lg p-3">
+                          <div className="flex items-start space-x-2">
+                            <div className="w-6 h-6 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-lg flex items-center justify-center">
+                              <span className="text-xs">💡</span>
+                            </div>
+                            <div>
+                              <span className="text-blue-300 font-bold text-xs">EXPLICATION</span>
+                              <p className="text-slate-200 text-sm mt-1">{question.explanation}</p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              <div className="flex justify-end">
+                <Button
+                  onClick={() => {
+                    setEditDialog({
+                      isOpen: false,
+                      quiz: null,
+                      title: '',
+                      description: ''
+                    })
+                  }}
+                  className="bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800 text-white px-6 py-2 text-sm font-medium"
+                >
+                  Fermer
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+    
+    {/* Edit Question Dialog - LIKE IN QUIZ MANAGEMENT */}
+    <Dialog open={editingQuestion.questionIndex !== null} onOpenChange={(open) => {
+      if (!open) {
+        setEditingQuestion({
+          questionIndex: null,
+          questionText: '',
+          choices: [],
+          correctAnswerId: ''
+        })
+      }
+    }}>
+      <DialogContent className="bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-600/50 max-w-2xl max-h-[80vh] flex flex-col">
+        <DialogHeader>
+          <DialogTitle className="text-white">Modifier la question</DialogTitle>
+          <DialogDescription className="text-slate-400">
+            Modifiez le texte de la question, les choix de réponse et sélectionnez la bonne réponse.
+          </DialogDescription>
+        </DialogHeader>
+        
+        {editingQuestion.questionIndex !== null && (
+          <div className="flex-1 overflow-y-auto ai-quiz-scrollbar pr-2 py-2">
+            <div className="space-y-6 pb-4">
+              <div>
+                <Label htmlFor="question-text" className="text-white mb-2 block">
+                  Texte de la question
+                </Label>
+                <Textarea
+                  id="question-text"
+                  value={editingQuestion.questionText}
+                  onChange={(e) => setEditingQuestion(prev => ({ ...prev, questionText: e.target.value }))}
+                  className="bg-slate-700/50 border-slate-600/50 text-white placeholder-slate-400"
+                  rows={3}
+                />
+              </div>
+              
+              <div>
+                <Label className="text-white mb-2 block">
+                  Choix de réponses
+                </Label>
+                <div className="space-y-3">
+                  {editingQuestion.choices.map((choice) => (
+                    <div key={choice.id} className="flex items-center space-x-3">
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="radio"
+                          id={`choice-${choice.id}`}
+                          name="correct-answer"
+                          checked={editingQuestion.correctAnswerId === choice.id}
+                          onChange={() => setEditingQuestion(prev => ({ ...prev, correctAnswerId: choice.id }))}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                        />
+                        <Label htmlFor={`choice-${choice.id}`} className="text-white">
+                          {choice.text}
+                        </Label>
+                      </div>
+                      <Input
+                        type="text"
+                        value={choice.text}
+                        onChange={(e) => handleChoiceChange(choice.id, e.target.value)}
+                        className="flex-1 bg-slate-700/50 border-slate-600/50 text-white placeholder-slate-400"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              <div className="flex justify-end space-x-3">
+                <Button
+                  variant="ghost"
+                  onClick={() => setEditingQuestion({
+                    questionIndex: null,
+                    questionText: '',
+                    choices: [],
+                    correctAnswerId: ''
+                  })}
+                  className="text-slate-300 hover:bg-slate-700"
+                >
+                  Annuler
+                </Button>
+                <Button
+                  onClick={handleSaveEditedQuestion}
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+                >
+                  Enregistrer
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  </>
   )
 }

@@ -20,8 +20,9 @@ import {
 import { 
   getQuizzesByTeacher, 
   getClassroomsByTeacher,
+  getUsersBySchool,
+  getSubmissionsByTeacher,
 } from '@/lib/database'
-import { getTeacherStudents, getSubmissionsByTeacher } from '@/lib/database-teacher'
 
 interface Quiz {
   id: string
@@ -129,8 +130,8 @@ export function TeacherAnalytics() {
       setQuizzes(teacherQuizzes as Quiz[])
       setClassrooms(teacherClassrooms as Classroom[])
 
-      // Get students (parents) for teacher's classrooms
-      const studentsData = await getTeacherStudents(profile.id)
+      // Get students (parents) for teacher's school
+      const studentsData = await getUsersBySchool(profile.school_id || '')
       const transformedStudents = studentsData.map((parent: any) => ({
         id: parent.id,
         classroom_id: parent.classroom_id || null,
