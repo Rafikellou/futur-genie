@@ -36,6 +36,7 @@ interface QuizQuestion {
   }>
   answer_keys: string[]
   order_index: number
+  explanation?: string // Add explanation field
 }
 
 interface Quiz {
@@ -84,6 +85,19 @@ export function QuizTaking({ quizId, onComplete, onExit }: QuizTakingProps) {
   const [showConfirmSubmit, setShowConfirmSubmit] = useState(false)
   const [quizCompleted, setQuizCompleted] = useState(false)
   const [finalScore, setFinalScore] = useState<{ score: number; total: number } | null>(null)
+
+  // Add state for explanations
+  const [explanations, setExplanations] = useState<Record<string, string>>({})
+  
+  // Function to shuffle choices array
+  const shuffleChoices = (choices: any[]) => {
+    const shuffled = [...choices]
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+    }
+    return shuffled
+  }
 
   useEffect(() => {
     if (quizId) {
@@ -145,6 +159,14 @@ export function QuizTaking({ quizId, onComplete, onExit }: QuizTakingProps) {
         [questionId]: isCorrect
       }))
 
+      // Store explanation if available
+      if (currentQuestion.explanation) {
+        setExplanations(prev => ({
+          ...prev,
+          [questionId]: currentQuestion.explanation || ''
+        }))
+      }
+
       // Show immediate feedback
       setCurrentFeedback({
         isCorrect,
@@ -163,7 +185,9 @@ export function QuizTaking({ quizId, onComplete, onExit }: QuizTakingProps) {
         })
       }
 
-      // Auto-advance to next question after 1.5 seconds
+      // Auto-advance to next question after different times based on correctness
+      const displayTime = isCorrect ? 1500 : 3000 // 1.5s for correct, 3s for incorrect
+      
       setTimeout(() => {
         setShowFeedback(false)
         if (currentQuestionIndex < quiz.items.length - 1) {
@@ -172,7 +196,7 @@ export function QuizTaking({ quizId, onComplete, onExit }: QuizTakingProps) {
           // Last question - show completion dialog
           setShowConfirmSubmit(true)
         }
-      }, 1500)
+      }, displayTime)
     }
   }
 
@@ -479,6 +503,8 @@ export function QuizTaking({ quizId, onComplete, onExit }: QuizTakingProps) {
   }
 
   const currentQuestion = quiz.items[currentQuestionIndex]
+  // Create shuffled choices for display
+  const shuffledChoices = currentQuestion ? shuffleChoices(currentQuestion.choices) : []
   const progress = ((currentQuestionIndex + 1) / quiz.items.length) * 100
   const answeredCount = getAnsweredQuestionsCount()
   const correctCount = getCorrectAnswersCount()
@@ -585,7 +611,7 @@ export function QuizTaking({ quizId, onComplete, onExit }: QuizTakingProps) {
           </h2>
           
           <div className="space-y-3">
-            {currentQuestion.choices.map((choice) => {
+            {shuffledChoices.map((choice) => {
               const isSelected = answers[currentQuestion.id]?.includes(choice.id)
               const isAnswered = isQuestionAnswered(currentQuestion.id)
               const isCorrect = currentQuestion.answer_keys.includes(choice.id)
@@ -659,7 +685,7 @@ export function QuizTaking({ quizId, onComplete, onExit }: QuizTakingProps) {
           </div>
         </div>
 
-        {/* Feedback Message */}
+        {/* Feedback Message with Explanation */}
         {showFeedback && currentFeedback && (
           <div className={`text-center p-4 rounded-xl mb-4 transition-all duration-300 ${
             currentFeedback.isCorrect
@@ -669,6 +695,12 @@ export function QuizTaking({ quizId, onComplete, onExit }: QuizTakingProps) {
             <div className="text-lg font-medium">
               {currentFeedback.message}
             </div>
+            {/* Show explanation if available */}
+            {explanations[currentQuestion.id] && (
+              <div className="mt-2 text-sm text-slate-300">
+                {explanations[currentQuestion.id]}
+              </div>
+            )}
           </div>
         )}
 
@@ -728,12 +760,6 @@ export function QuizTaking({ quizId, onComplete, onExit }: QuizTakingProps) {
 
             <div className="flex flex-col gap-3">
               <button 
-                onClick={() => setShowConfirmSubmit(false)}
-                className="w-full py-3 bg-slate-600/80 hover:bg-slate-500 text-white rounded-xl font-medium transition-all duration-200 text-sm"
-              >
-                Continuer
-              </button>
-              <button 
                 onClick={handleSubmitQuiz}
                 disabled={isSubmitting}
                 className="w-full py-3 btn-gradient gradient-accent text-white rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50 text-sm"
@@ -756,4 +782,5 @@ export function QuizTaking({ quizId, onComplete, onExit }: QuizTakingProps) {
       </div>
     </div>
   )
+
 }

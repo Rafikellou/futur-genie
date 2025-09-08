@@ -63,9 +63,15 @@ export async function GET(
       return NextResponse.json({ error: 'Failed to fetch quiz items' }, { status: 500 })
     }
 
+    // Ensure explanation field is included
+    const processedItems = items?.map(item => ({
+      ...item,
+      explanation: item.explanation || '' // Ensure explanation field exists
+    })) || []
+
     const quizWithItems = {
       ...quiz,
-      items: items || []
+      items: processedItems
     }
 
     console.log('Successfully fetched quiz:', quizWithItems.title, 'with', items?.length || 0, 'items')
